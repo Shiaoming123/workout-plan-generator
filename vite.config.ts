@@ -11,5 +11,23 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_DEEPSEEK_API_KEY': JSON.stringify(env.VITE_DEEPSEEK_API_KEY),
       'import.meta.env.VITE_DEEPSEEK_BASE_URL': JSON.stringify(env.VITE_DEEPSEEK_BASE_URL),
     },
+    server: {
+      proxy: {
+        // 开发环境代理 DeepSeek API，解决 CORS 问题
+        '/api/deepseek': {
+          target: 'https://api.deepseek.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/deepseek/, ''),
+          configure: (proxy, options) => {
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              // 添加 API Key 到请求头
+              if (env.VITE_DEEPSEEK_API_KEY) {
+                proxyReq.setHeader('Authorization', `Bearer ${env.VITE_DEEPSEEK_API_KEY}`);
+              }
+            });
+          }
+        }
+      }
+    }
   };
 });

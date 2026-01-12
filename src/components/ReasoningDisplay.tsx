@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ReasoningDisplayProps {
   reasoning: string;
@@ -8,7 +10,7 @@ interface ReasoningDisplayProps {
  * 思考过程展示组件
  *
  * 用于展示 DeepSeek Reasoner 模型的推理过程
- * 可折叠展开，默认折叠
+ * 可折叠展开，默认折叠，支持 Markdown 渲染
  */
 export default function ReasoningDisplay({ reasoning }: ReasoningDisplayProps) {
   const [expanded, setExpanded] = useState(false);
@@ -53,9 +55,11 @@ export default function ReasoningDisplay({ reasoning }: ReasoningDisplayProps) {
       {expanded && (
         <div className="p-4 print:block print:p-4">
           <div className="bg-white rounded-lg p-4 border border-purple-200">
-            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed">
-              {reasoning}
-            </pre>
+            <div className="prose prose-sm max-w-none prose-purple">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {reasoning}
+              </ReactMarkdown>
+            </div>
           </div>
           <p className="text-xs text-purple-700 mt-3">
             💡 这是 AI 在生成训练计划时的思考过程，展示了它如何分析你的情况并制定方案。
