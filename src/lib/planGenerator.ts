@@ -6,6 +6,7 @@ import {
   WorkoutSession,
   WorkoutSet,
   Exercise,
+  GenerationMetadata,
 } from '../types';
 import {
   allExercises,
@@ -28,9 +29,16 @@ import {
 } from '../data/templates';
 
 /**
- * 主生成函数：根据用户输入生成训练计划
+ * 规则引擎生成函数：基于模板和规则生成训练计划
+ *
+ * @param profile - 用户资料
+ * @param metadata - 可选的元数据（用于降级场景）
+ * @returns 完整的训练计划（包含元数据）
  */
-export function generatePlan(profile: UserProfile): TrainingPlan {
+export function generateRuleBasedPlan(
+  profile: UserProfile,
+  metadata?: Partial<GenerationMetadata>
+): TrainingPlan {
   const { period } = profile;
 
   const summary = generateSummary(profile);
@@ -42,6 +50,11 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
       summary,
       weeks: [weekPlan],
       generatedAt: new Date().toISOString(),
+      metadata: {
+        method: 'rule-based',
+        generatedAt: new Date().toISOString(),
+        ...metadata,
+      },
     };
   }
 
@@ -54,6 +67,11 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
       summary,
       weeks,
       generatedAt: new Date().toISOString(),
+      metadata: {
+        method: 'rule-based',
+        generatedAt: new Date().toISOString(),
+        ...metadata,
+      },
     };
   }
 
@@ -81,6 +99,11 @@ export function generatePlan(profile: UserProfile): TrainingPlan {
       summary,
       months,
       generatedAt: new Date().toISOString(),
+      metadata: {
+        method: 'rule-based',
+        generatedAt: new Date().toISOString(),
+        ...metadata,
+      },
     };
   }
 

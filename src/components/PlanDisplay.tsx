@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TrainingPlan, WorkoutSet, WorkoutSession, WeekPlan } from '../types';
 import { getExerciseById } from '../lib/planGenerator';
 import ExportButtons from './ExportButtons';
+import ReasoningDisplay from './ReasoningDisplay';
 
 interface PlanDisplayProps {
   plan: TrainingPlan;
@@ -46,6 +47,41 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
           </div>
         )}
       </div>
+
+      {/* Generation Metadata */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="font-semibold text-gray-700">生成方式：</span>
+            <span
+              className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
+                plan.metadata.method === 'ai'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-gray-200 text-gray-800'
+              }`}
+            >
+              {plan.metadata.method === 'ai'
+                ? `🤖 AI 驱动 (${plan.metadata.model})`
+                : '📋 规则引擎'}
+            </span>
+          </div>
+          {plan.metadata.apiCallDuration && (
+            <span className="text-sm text-gray-600">
+              耗时: {(plan.metadata.apiCallDuration / 1000).toFixed(2)}秒
+            </span>
+          )}
+        </div>
+        {plan.metadata.fallbackReason && (
+          <div className="mt-2 text-sm text-amber-700">
+            ℹ️ {plan.metadata.fallbackReason}
+          </div>
+        )}
+      </div>
+
+      {/* Reasoning Process (Reasoner Model Only) */}
+      {plan.metadata.reasoningProcess && (
+        <ReasoningDisplay reasoning={plan.metadata.reasoningProcess} />
+      )}
 
       {/* Export Buttons */}
       <ExportButtons plan={plan} />

@@ -22,6 +22,12 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     likes: [],
     dislikes: [],
     period: 'week',
+    // AI Integration fields
+    aiModel: 'deepseek-chat',
+    goalNotes: '',
+    experienceNotes: '',
+    equipmentNotes: '',
+    preferencesNotes: '',
   });
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -84,6 +90,46 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         </div>
       )}
 
+      {/* AI 模型选择 */}
+      <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+        <label className="block font-semibold mb-3 text-purple-900">
+          🤖 AI 模型选择 <span className="text-red-500">*</span>
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-start cursor-pointer">
+            <input
+              type="radio"
+              name="aiModel"
+              value="deepseek-chat"
+              checked={profile.aiModel === 'deepseek-chat'}
+              onChange={(e) => updateField('aiModel', e.target.value as any)}
+              className="mt-1 mr-2"
+            />
+            <div>
+              <strong className="text-gray-800">Chat 模型</strong>
+              <span className="text-gray-600"> - 快速生成，直接输出训练计划</span>
+            </div>
+          </label>
+          <label className="flex items-start cursor-pointer">
+            <input
+              type="radio"
+              name="aiModel"
+              value="deepseek-reasoner"
+              checked={profile.aiModel === 'deepseek-reasoner'}
+              onChange={(e) => updateField('aiModel', e.target.value as any)}
+              className="mt-1 mr-2"
+            />
+            <div>
+              <strong className="text-gray-800">Reasoner 模型</strong>
+              <span className="text-gray-600"> - 展示详细思考过程和推理逻辑</span>
+            </div>
+          </label>
+        </div>
+        <p className="text-xs text-purple-700 mt-3">
+          💡 Chat 模型速度更快；Reasoner 模型会展示 AI 如何分析你的情况并制定计划
+        </p>
+      </div>
+
       {/* 训练目标 */}
       <div className="mb-6">
         <label className="block font-semibold mb-2 text-gray-700">
@@ -100,6 +146,18 @@ export default function InputForm({ onGenerate }: InputFormProps) {
           <option value="rehab">康复</option>
           <option value="general">综合健康</option>
         </select>
+        <div className="mt-2">
+          <label className="block text-sm text-gray-600 mb-1">
+            目标补充说明 (可选)
+          </label>
+          <textarea
+            value={profile.goalNotes || ''}
+            onChange={(e) => updateField('goalNotes', e.target.value)}
+            placeholder="例如：主要想减掉腹部脂肪，同时保持手臂肌肉量..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            rows={2}
+          />
+        </div>
       </div>
 
       {/* 基本信息 */}
@@ -178,6 +236,18 @@ export default function InputForm({ onGenerate }: InputFormProps) {
               <span>{opt.label}</span>
             </label>
           ))}
+        </div>
+        <div className="mt-2">
+          <label className="block text-sm text-gray-600 mb-1">
+            经验补充说明 (可选)
+          </label>
+          <textarea
+            value={profile.experienceNotes || ''}
+            onChange={(e) => updateField('experienceNotes', e.target.value)}
+            placeholder="例如：有3个月的健身房训练经验，熟悉基本器械..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            rows={2}
+          />
         </div>
       </div>
 
@@ -270,6 +340,18 @@ export default function InputForm({ onGenerate }: InputFormProps) {
             </label>
           ))}
         </div>
+        <div className="mt-2">
+          <label className="block text-sm text-gray-600 mb-1">
+            器械补充说明 (可选)
+          </label>
+          <textarea
+            value={profile.equipmentNotes || ''}
+            onChange={(e) => updateField('equipmentNotes', e.target.value)}
+            placeholder="例如：哑铃最大重量30kg，弹力带为中等阻力..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            rows={2}
+          />
+        </div>
       </div>
 
       {/* 身体限制 */}
@@ -306,6 +388,20 @@ export default function InputForm({ onGenerate }: InputFormProps) {
             rows={2}
           />
         )}
+      </div>
+
+      {/* 其他偏好 */}
+      <div className="mb-6">
+        <label className="block font-semibold mb-2 text-gray-700">
+          其他偏好 (可选)
+        </label>
+        <textarea
+          value={profile.preferencesNotes || ''}
+          onChange={(e) => updateField('preferencesNotes', e.target.value)}
+          placeholder="例如：喜欢力量训练，不喜欢有氧；希望训练时长控制在40分钟内..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          rows={3}
+        />
       </div>
 
       {/* 计划周期 */}
