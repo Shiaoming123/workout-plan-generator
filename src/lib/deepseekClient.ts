@@ -40,19 +40,6 @@ function resolveAPIConfig(customConfig?: CustomAPIConfig): ResolvedAPIConfig {
 }
 
 /**
- * 获取 API 配置（保留用于向后兼容）
- */
-function getAPIConfig() {
-  const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
-  const BASE_URL = import.meta.env.VITE_DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
-
-  return {
-    API_KEY,
-    BASE_URL,
-  };
-}
-
-/**
  * 检查 API 是否已配置
  */
 export function isAPIConfigured(customConfig?: CustomAPIConfig): boolean {
@@ -61,6 +48,172 @@ export function isAPIConfigured(customConfig?: CustomAPIConfig): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * 调用 LLM API（OpenAI 兼容格式）- 流式版本
+ *
+ * @param model - 模型类型
+ * @param messages - 对话消息数组
+ * @param options - 可选配置
+ * @param customConfig - 用户自定义 API 配置（优先级最高）
+ * @param onChunk - 流式数据回调函数，接收每次增量内容
+ * @returns API 调用结果
+ * @throws 如果 API 调用失败或超时
+ */
+export async function callDeepSeekStreaming(
+  model: DeepSeekModel,
+  messages: DeepSeekMessage[],
+  options: {
+    temperature?: number;
+    max_tokens?: number;
+  } = {},
+  customConfig: CustomAPIConfig | undefined,
+  onChunk: (delta: string, isReasoning: boolean) => void
+): Promise<APICallResult> {
+  const config = resolveAPIConfig(customConfig);
+  const startTime = Date.now();
+
+  // 如果使用自定义配置，使用自定义的模型名称
+  const finalModel = config.source === 'custom' ? config.model : model;
+
+  console.log('[LLM API Streaming] 配置检查:');
+  console.log('  - 配置来源:', config.source === 'custom' ? '用户自定义' : '环境变量');
+  console.log('  - Model:', finalModel);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000); // 流式请求延长超时时间
+
+  const url = `${config.baseUrl}/v1/chat/completions`;
+
+  const requestBody = {
+    model: finalModel,
+    messages,
+    temperature: options?.temperature ?? 0.7,
+    max_tokens: options?.max_tokens ?? 8000,
+    stream: true, // ✅ 启用流式输出
+  };
+
+  console.log('[LLM API Streaming] 发起流式请求...');
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    console.log(`[LLM API Streaming] 响应收到 (状态: ${response.status})`);
+
+    if (!response.ok) {
+      let errorMessage = response.statusText;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error?.message || errorMessage;
+        console.error('[LLM API Streaming] 错误详情:', errorData);
+      } catch (e) {
+        console.error('[LLM API Streaming] 无法解析错误响应');
+      }
+      throw new Error(`API 错误 (${response.status}): ${errorMessage}`);
+    }
+
+    // 处理流式响应
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法获取响应流');
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let fullReasoning = '';
+    let totalTokens = 0;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              console.log('[LLM API Streaming] 流式传输完成');
+              continue;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices?.[0]?.delta;
+
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk(delta.content, false); // 普通内容
+              }
+
+              if (delta?.reasoning_content) {
+                fullReasoning += delta.reasoning_content;
+                onChunk(delta.reasoning_content, true); // 推理内容
+              }
+
+              // 记录 token 使用（部分 API 可能在流式结束时提供）
+              if (parsed.usage) {
+                totalTokens = parsed.usage.total_tokens;
+              }
+            } catch (e) {
+              console.warn('[LLM API Streaming] 跳过无法解析的行:', line);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+      clearTimeout(timeout);
+    }
+
+    const duration = Date.now() - startTime;
+
+    console.log('[LLM API Streaming] 流式接收完成:');
+    console.log('  - 内容长度:', fullContent.length);
+    console.log('  - 推理长度:', fullReasoning.length);
+    console.log('  - 耗时:', duration, 'ms');
+
+    return {
+      content: fullContent,
+      reasoning: fullReasoning || undefined,
+      usage: {
+        prompt_tokens: 0, // 流式模式下部分 API 不提供详细统计
+        completion_tokens: 0,
+        total_tokens: totalTokens,
+      },
+      model: finalModel,
+      duration,
+    };
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    console.error(`[LLM API Streaming] 请求失败 (耗时: ${duration}ms)`);
+    console.error('  - 错误:', error.message);
+
+    if (error.name === 'AbortError') {
+      throw new Error('流式 API 请求超时（120秒）');
+    }
+
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('网络连接失败 - 请检查 API Base URL 或网络连接');
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
