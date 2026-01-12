@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
+import type { CustomAPIConfig } from '../types/api';
+import { saveAPIConfig, loadAPIConfig, getDefaultAPIConfig } from '../lib/storageUtils';
 
 interface InputFormProps {
   onGenerate: (profile: UserProfile) => void;
@@ -31,6 +33,27 @@ export default function InputForm({ onGenerate }: InputFormProps) {
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+
+  // ✅ 新增：API 配置状态
+  const [showAPIConfig, setShowAPIConfig] = useState(false);
+  const [apiConfig, setApiConfig] = useState<CustomAPIConfig>(getDefaultAPIConfig());
+
+  // ✅ 加载保存的 API 配置
+  useEffect(() => {
+    const saved = loadAPIConfig();
+    if (saved) {
+      setApiConfig(saved);
+      updateField('customAPI', saved);
+    }
+  }, []);
+
+  // ✅ API 配置变更处理
+  const handleAPIConfigChange = (field: keyof CustomAPIConfig, value: any) => {
+    const updated = { ...apiConfig, [field]: value };
+    setApiConfig(updated);
+    updateField('customAPI', updated);
+    saveAPIConfig(updated); // 自动保存到 LocalStorage
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +151,113 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         <p className="text-xs text-purple-700 mt-3">
           💡 Chat 模型速度更快；Reasoner 模型会展示 AI 如何分析你的情况并制定计划
         </p>
+      </div>
+
+      {/* ✅ 新增：自定义 API 配置区（可折叠）*/}
+      <div className="mb-6 border-2 border-blue-300 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowAPIConfig(!showAPIConfig)}
+          className="w-full p-4 bg-blue-50 text-left font-semibold text-blue-900 flex justify-between items-center hover:bg-blue-100 transition-colors"
+        >
+          <span>🔧 自定义 API 配置（支持 OpenAI/Azure/本地模型）</span>
+          <span className="text-2xl">{showAPIConfig ? '▼' : '▶'}</span>
+        </button>
+
+        {showAPIConfig && (
+          <div className="p-4 space-y-4 bg-white">
+            {/* 启用开关 */}
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={apiConfig.enabled}
+                onChange={(e) => handleAPIConfigChange('enabled', e.target.checked)}
+                className="mr-2 w-4 h-4"
+              />
+              <span className="font-medium text-gray-800">使用自定义 API 配置（覆盖环境变量）</span>
+            </label>
+
+            {apiConfig.enabled && (
+              <div className="space-y-4 pl-6 border-l-2 border-blue-200">
+                {/* 提供商选择 */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">API 提供商</label>
+                  <select
+                    value={apiConfig.provider}
+                    onChange={(e) => handleAPIConfigChange('provider', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="azure">Azure OpenAI</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="other">其他（兼容 OpenAI 格式）</option>
+                  </select>
+                </div>
+
+                {/* API Base URL */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">API Base URL</label>
+                  <input
+                    type="text"
+                    value={apiConfig.baseUrl}
+                    onChange={(e) => handleAPIConfigChange('baseUrl', e.target.value)}
+                    placeholder="https://api.openai.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    示例: OpenAI (https://api.openai.com) | DeepSeek (https://api.deepseek.com) | 本地 (http://localhost:11434)
+                  </p>
+                </div>
+
+                {/* API Key */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">API Key</label>
+                  <input
+                    type="password"
+                    value={apiConfig.apiKey}
+                    onChange={(e) => handleAPIConfigChange('apiKey', e.target.value)}
+                    placeholder="sk-..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    🔒 你的 API Key 仅存储在浏览器本地，不会上传到服务器
+                  </p>
+                </div>
+
+                {/* 模型名称 */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">模型名称</label>
+                  <input
+                    type="text"
+                    value={apiConfig.model}
+                    onChange={(e) => handleAPIConfigChange('model', e.target.value)}
+                    placeholder="gpt-4"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    示例: gpt-4, gpt-3.5-turbo, deepseek-chat, claude-3-opus
+                  </p>
+                </div>
+
+                {/* 清除配置按钮 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('确定要清除保存的 API 配置吗？')) {
+                      const defaultConfig = getDefaultAPIConfig();
+                      setApiConfig(defaultConfig);
+                      updateField('customAPI', defaultConfig);
+                      saveAPIConfig(defaultConfig);
+                    }
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  🗑️ 清除保存的配置
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 训练目标 */}

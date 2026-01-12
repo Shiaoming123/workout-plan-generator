@@ -22,9 +22,9 @@ import { generateRuleBasedPlan } from './planGenerator';
  * @returns 完整的训练计划（包含元数据）
  */
 export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan> {
-  // 检查 API 配置
-  if (!isAPIConfigured()) {
-    console.warn('DeepSeek API 未配置，降级到规则引擎');
+  // 检查 API 配置（优先检查自定义配置）
+  if (!isAPIConfigured(profile.customAPI)) {
+    console.warn('API 未配置，降级到规则引擎');
     return generateRuleBasedPlan(profile, {
       method: 'rule-based',
       fallbackReason: 'API Key 未配置',
@@ -37,14 +37,19 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(profile);
 
-    console.log('🤖 开始调用 DeepSeek API...');
+    console.log('🤖 开始调用 LLM API...');
     console.log('模型:', profile.aiModel);
 
-    // 调用 API
-    const result = await callDeepSeek(profile.aiModel, [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ]);
+    // 调用 API（支持自定义配置）
+    const result = await callDeepSeek(
+      profile.aiModel,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      undefined,
+      profile.customAPI // ✅ 传递自定义配置
+    );
 
     console.log('✅ API 调用成功');
     console.log('耗时:', result.duration, 'ms');
