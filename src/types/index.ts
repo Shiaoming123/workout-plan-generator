@@ -45,6 +45,12 @@ export interface UserProfile {
   likes: ActivityPreference[];
   dislikes: ActivityPreference[];
   period: PeriodType;
+  // ============ AI Integration Fields ============
+  aiModel: 'deepseek-chat' | 'deepseek-reasoner'; // AI 模型选择
+  goalNotes?: string; // 目标补充说明
+  experienceNotes?: string; // 经验补充说明
+  equipmentNotes?: string; // 器械补充说明
+  preferencesNotes?: string; // 其他偏好说明
 }
 
 // ============ Exercise & Workout Types ============
@@ -130,6 +136,8 @@ export interface TrainingPlan {
   weeks?: WeekPlan[]; // for week plan
   months?: MonthPlan[]; // for month/quarter plan
   generatedAt: string;
+  // ============ AI Integration Metadata ============
+  metadata: GenerationMetadata;
 }
 
 // ============ Template Types ============
@@ -149,4 +157,15 @@ export interface ExperienceModifier {
   volumeMultiplier: number; // 训练容量倍数
   intensityLevel: 'low' | 'medium' | 'high';
   restMultiplier: number; // 休息时间倍数
+}
+
+// ============ AI Generation Metadata ============
+
+export interface GenerationMetadata {
+  method: 'ai' | 'rule-based'; // 生成方式
+  model?: 'deepseek-chat' | 'deepseek-reasoner'; // 使用的 AI 模型
+  reasoningProcess?: string; // Reasoner 模型的思考过程
+  generatedAt: string; // ISO 时间戳
+  apiCallDuration?: number; // API 调用耗时（毫秒）
+  fallbackReason?: string; // 降级到规则引擎的原因
 }
