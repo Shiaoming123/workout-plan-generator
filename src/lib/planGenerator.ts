@@ -16,7 +16,6 @@ import {
   cardioExercises,
   hiitExercises,
   stretchExercises,
-  mobilityExercises,
   getAvailableExercises,
 } from '../data/exercises';
 import {
@@ -156,9 +155,7 @@ function generateWorkoutSession(
 
   const warmup = generateWarmup(
     availableEquipment,
-    constraints,
-    expModifier,
-    volumeMultiplier
+    constraints
   );
   const main = generateMainWork(
     profile,
@@ -169,14 +166,12 @@ function generateWorkoutSession(
   );
   const accessory = generateAccessory(
     profile,
-    focus,
     expModifier,
     volumeMultiplier
   );
   const cooldown = generateCooldown(
     availableEquipment,
-    constraints,
-    expModifier
+    constraints
   );
 
   return {
@@ -199,9 +194,7 @@ function generateWorkoutSession(
  */
 function generateWarmup(
   availableEquipment: string[],
-  constraints: string[],
-  expModifier: any,
-  volumeMultiplier: number
+  constraints: string[]
 ): WorkoutSet[] {
   const available = getAvailableExercises(
     warmupExercises,
@@ -229,7 +222,7 @@ function generateMainWork(
   expModifier: any,
   volumeMultiplier: number
 ): WorkoutSet[] {
-  const { goal, equipment, constraints } = profile;
+  const { equipment, constraints } = profile;
   const sets: WorkoutSet[] = [];
 
   if (focus.includes('上肢') || focus.includes('推') || focus.includes('拉')) {
@@ -327,7 +320,6 @@ function generateMainWork(
  */
 function generateAccessory(
   profile: UserProfile,
-  focus: string,
   expModifier: any,
   volumeMultiplier: number
 ): WorkoutSet[] {
@@ -355,8 +347,7 @@ function generateAccessory(
  */
 function generateCooldown(
   availableEquipment: string[],
-  constraints: string[],
-  expModifier: any
+  constraints: string[]
 ): WorkoutSet[] {
   const available = getAvailableExercises(
     stretchExercises,
