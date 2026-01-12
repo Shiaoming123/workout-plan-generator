@@ -2,26 +2,42 @@ import { useState } from 'react';
 import Header from './components/Header';
 import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
+import StreamingDisplay from './components/StreamingDisplay';
 import { UserProfile, TrainingPlan } from './types';
-import { generateAIPlan } from './lib/aiPlanGenerator';
+import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
 export default function App() {
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 流式内容状态
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamContent, setStreamContent] = useState('');
+  const [streamReasoning, setStreamReasoning] = useState('');
+
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
+    setIsStreaming(true);
     setError(null);
+    setPlan(null);
+    setStreamContent('');
+    setStreamReasoning('');
 
     try {
-      const newPlan = await generateAIPlan(profile);
+      const newPlan = await generateAIPlanStreaming(profile, (content, reasoning) => {
+        // 实时更新流式内容
+        setStreamContent(content);
+        setStreamReasoning(reasoning);
+      });
+
       setPlan(newPlan);
     } catch (error: any) {
       console.error('生成计划失败:', error);
       setError(error.message || '生成计划失败，请稍后重试');
     } finally {
       setLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -38,14 +54,20 @@ export default function App() {
 
           {/* Right: Plan Display */}
           <div>
-            {loading && (
+            {/* 流式生成中 */}
+            {isStreaming && (
+              <StreamingDisplay
+                content={streamContent}
+                reasoning={streamReasoning}
+              />
+            )}
+
+            {/* 非流式加载中（降级到规则引擎时）*/}
+            {loading && !isStreaming && (
               <div className="bg-white rounded-lg shadow-md p-12 flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
                   <p className="text-gray-600">正在生成训练计划...</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    使用 AI 生成可能需要 5-15 秒，请耐心等待
-                  </p>
                 </div>
               </div>
             )}

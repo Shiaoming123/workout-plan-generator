@@ -14,7 +14,8 @@
       "Bash(npm install:*)",
       "Bash(node test-api.js:*)",
       "Bash(pkill:*)",
-      "Bash(gh pr list:*)"
+      "Bash(gh pr list:*)",
+      "Bash(npm run dev:*)"
     ]
   }
 }

@@ -54,7 +54,7 @@ export default function ReasoningDisplay({ reasoning }: ReasoningDisplayProps) {
 
       {expanded && (
         <div className="p-4 print:block print:p-4">
-          <div className="bg-white rounded-lg p-4 border border-purple-200">
+          <div className="bg-white rounded-lg p-4 border border-purple-200 max-h-96 overflow-y-auto">
             <div className="prose prose-sm max-w-none prose-purple">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {reasoning}

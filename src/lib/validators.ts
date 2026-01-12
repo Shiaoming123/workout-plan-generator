@@ -8,6 +8,7 @@ import type { TrainingPlan, GenerationMetadata } from '../types';
  */
 export function validateTrainingPlan(data: unknown): data is TrainingPlan {
   if (!data || typeof data !== 'object') {
+    console.error('[Validator] 数据不是对象');
     return false;
   }
 
@@ -15,11 +16,17 @@ export function validateTrainingPlan(data: unknown): data is TrainingPlan {
 
   // 验证必需字段
   if (!plan.period || !plan.summary || !plan.generatedAt) {
+    console.error('[Validator] 缺少必需字段:', {
+      hasPeriod: !!plan.period,
+      hasSummary: !!plan.summary,
+      hasGeneratedAt: !!plan.generatedAt,
+    });
     return false;
   }
 
   // 验证 period 类型
   if (!['week', 'month', 'quarter'].includes(plan.period)) {
+    console.error('[Validator] period 类型无效:', plan.period);
     return false;
   }
 
@@ -31,20 +38,36 @@ export function validateTrainingPlan(data: unknown): data is TrainingPlan {
     typeof plan.summary.sessionMinutes !== 'number' ||
     typeof plan.summary.totalWeeks !== 'number'
   ) {
+    console.error('[Validator] summary 字段验证失败:', {
+      hasGoal: !!plan.summary.goal,
+      hasGoalZh: !!plan.summary.goalZh,
+      daysPerWeekType: typeof plan.summary.daysPerWeek,
+      sessionMinutesType: typeof plan.summary.sessionMinutes,
+      totalWeeksType: typeof plan.summary.totalWeeks,
+    });
     return false;
   }
 
   // 根据 period 验证结构
   if (plan.period === 'week' || plan.period === 'month') {
     if (!Array.isArray(plan.weeks) || plan.weeks.length === 0) {
+      console.error('[Validator] weeks 数组缺失或为空:', {
+        isArray: Array.isArray(plan.weeks),
+        length: plan.weeks?.length,
+      });
       return false;
     }
   } else if (plan.period === 'quarter') {
     if (!Array.isArray(plan.months) || plan.months.length === 0) {
+      console.error('[Validator] months 数组缺失或为空:', {
+        isArray: Array.isArray(plan.months),
+        length: plan.months?.length,
+      });
       return false;
     }
   }
 
+  console.log('[Validator] ✅ 验证通过');
   return true;
 }
 
