@@ -3,40 +3,74 @@ import type {
   DeepSeekMessage,
   DeepSeekResponse,
   APICallResult,
+  CustomAPIConfig,
+  ResolvedAPIConfig,
 } from '../types/api';
 
 /**
- * 获取 API 配置
+ * 解析 API 配置（优先使用自定义配置）
+ */
+function resolveAPIConfig(customConfig?: CustomAPIConfig): ResolvedAPIConfig {
+  // 1. 优先使用自定义配置
+  if (customConfig?.enabled && customConfig.apiKey) {
+    console.log('[API Config] 使用自定义配置');
+    return {
+      baseUrl: customConfig.baseUrl,
+      apiKey: customConfig.apiKey,
+      model: customConfig.model,
+      source: 'custom',
+    };
+  }
+
+  // 2. 回退到环境变量
+  const envApiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+  const envBaseUrl = import.meta.env.VITE_DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
+
+  if (!envApiKey || envApiKey === 'your_api_key_here') {
+    throw new Error('未配置 API Key - 请使用自定义配置或设置环境变量');
+  }
+
+  console.log('[API Config] 使用环境变量配置');
+  return {
+    baseUrl: envBaseUrl,
+    apiKey: envApiKey,
+    model: 'deepseek-chat', // 默认模型
+    source: 'env',
+  };
+}
+
+/**
+ * 获取 API 配置（保留用于向后兼容）
  */
 function getAPIConfig() {
   const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
   const BASE_URL = import.meta.env.VITE_DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
 
-  // 在开发环境中使用代理避免 CORS 问题
-  const isDevelopment = import.meta.env.DEV;
-  const PROXY_URL = '/api/deepseek';
-
   return {
     API_KEY,
-    BASE_URL: isDevelopment ? PROXY_URL : BASE_URL,
-    isDevelopment
+    BASE_URL,
   };
 }
 
 /**
  * 检查 API 是否已配置
  */
-export function isAPIConfigured(): boolean {
-  const { API_KEY } = getAPIConfig();
-  return !!API_KEY && API_KEY !== 'your_api_key_here';
+export function isAPIConfigured(customConfig?: CustomAPIConfig): boolean {
+  try {
+    resolveAPIConfig(customConfig);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * 调用 DeepSeek API
+ * 调用 LLM API（OpenAI 兼容格式）
  *
  * @param model - 模型类型 (deepseek-chat 或 deepseek-reasoner)
  * @param messages - 对话消息数组
  * @param options - 可选配置
+ * @param customConfig - 用户自定义 API 配置（优先级最高）
  * @returns API 调用结果，包含内容、推理过程（如有）、使用情况和耗时
  * @throws 如果 API 调用失败或超时
  */
@@ -47,50 +81,46 @@ export async function callDeepSeek(
     temperature?: number;
     max_tokens?: number;
     stream?: boolean;
-  }
+  },
+  customConfig?: CustomAPIConfig
 ): Promise<APICallResult> {
-  const { API_KEY, BASE_URL, isDevelopment } = getAPIConfig();
+  const config = resolveAPIConfig(customConfig);
+  const startTime = Date.now();
+
+  // 如果使用自定义配置，使用自定义的模型名称
+  const finalModel = config.source === 'custom' ? config.model : model;
 
   // 详细的环境检查
-  console.log('[DeepSeek API] 环境检查:');
-  console.log('  - API_KEY:', API_KEY ? `已配置 (${API_KEY.substring(0, 10)}...)` : '未配置');
-  console.log('  - BASE_URL:', BASE_URL);
-  console.log('  - Model:', model);
-  console.log('  - 开发模式:', isDevelopment);
-
-  if (!API_KEY || API_KEY === 'your_api_key_here') {
-    throw new Error('DeepSeek API Key 未配置，请在 .env 文件中设置 VITE_DEEPSEEK_API_KEY');
-  }
+  console.log('[LLM API] 配置检查:');
+  console.log('  - 配置来源:', config.source === 'custom' ? '用户自定义' : '环境变量');
+  console.log('  - API_KEY:', config.apiKey ? `已配置 (${config.apiKey.substring(0, 10)}...)` : '未配置');
+  console.log('  - BASE_URL:', config.baseUrl);
+  console.log('  - Model:', finalModel);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000); // 增加到120秒超时
+  const timeout = setTimeout(() => controller.abort(), 60000); // 调整为60秒超时
 
-  const startTime = Date.now();
-  const url = `${BASE_URL}/v1/chat/completions`;
+  const url = `${config.baseUrl}/v1/chat/completions`;
 
   const requestBody = {
-    model,
+    model: finalModel,
     messages,
     temperature: options?.temperature ?? 0.7,
     max_tokens: options?.max_tokens ?? 8000,
     stream: options?.stream ?? false,
   };
 
-  console.log('[DeepSeek API] 发起请求:');
+  console.log('[LLM API] 发起请求:');
   console.log('  - URL:', url);
   console.log('  - Messages 数量:', messages.length);
   console.log('  - 总字符数:', JSON.stringify(messages).length);
 
   try {
-    // 在开发环境中，代理会添加 Authorization header
+    // 所有环境都添加 Authorization header
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
     };
-
-    // 在生产环境中，直接添加 Authorization header
-    if (!isDevelopment) {
-      headers['Authorization'] = `Bearer ${API_KEY}`;
-    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -100,7 +130,17 @@ export async function callDeepSeek(
     });
 
     const duration = Date.now() - startTime;
-    console.log(`[DeepSeek API] 响应收到 (耗时: ${duration}ms, 状态: ${response.status})`);
+    console.log(`[LLM API] 响应收到 (耗时: ${duration}ms, 状态: ${response.status})`);
+
+    // 打印响应头信息用于调试
+    console.log('[LLM API] 响应头:', {
+      'content-type': response.headers.get('content-type'),
+      'content-length': response.headers.get('content-length'),
+      'transfer-encoding': response.headers.get('transfer-encoding'),
+    });
+
+    // 🔧 关键修复：收到响应头后立即清除超时，避免读取响应体时被 abort
+    clearTimeout(timeout);
 
     if (!response.ok) {
       let errorMessage = response.statusText;
@@ -110,25 +150,27 @@ export async function callDeepSeek(
         const errorData = await response.json();
         errorMessage = errorData.error?.message || errorMessage;
         errorDetails = JSON.stringify(errorData, null, 2);
-        console.error('[DeepSeek API] 错误详情:', errorDetails);
+        console.error('[LLM API] 错误详情:', errorDetails);
       } catch (e) {
-        console.error('[DeepSeek API] 无法解析错误响应');
+        console.error('[LLM API] 无法解析错误响应');
       }
 
       throw new Error(
-        `DeepSeek API 错误 (${response.status}): ${errorMessage}`
+        `API 错误 (${response.status}): ${errorMessage}`
       );
     }
 
+    console.log('[LLM API] 开始读取响应体...');
     const data: DeepSeekResponse = await response.json();
+    console.log('[LLM API] 响应体读取完成');
 
     if (!data.choices || data.choices.length === 0) {
-      console.error('[DeepSeek API] 响应数据:', JSON.stringify(data, null, 2));
-      throw new Error('DeepSeek API 返回了空响应');
+      console.error('[LLM API] 响应数据:', JSON.stringify(data, null, 2));
+      throw new Error('API 返回了空响应');
     }
 
     const choice = data.choices[0];
-    console.log('[DeepSeek API] 成功接收响应:');
+    console.log('[LLM API] 成功接收响应:');
     console.log('  - 内容长度:', choice.message.content.length);
     console.log('  - 推理内容:', choice.message.reasoning_content ? '有' : '无');
     console.log('  - Token 使用:', data.usage);
@@ -142,17 +184,17 @@ export async function callDeepSeek(
     };
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[DeepSeek API] 请求失败 (耗时: ${duration}ms)`);
+    console.error(`[LLM API] 请求失败 (耗时: ${duration}ms)`);
     console.error('  - 错误类型:', error.name);
     console.error('  - 错误消息:', error.message);
     console.error('  - 完整错误:', error);
 
     if (error.name === 'AbortError') {
-      throw new Error('DeepSeek API 请求超时（120秒）- 请检查网络连接或稍后重试');
+      throw new Error('API 请求超时（60秒）- 请检查网络连接或更换模型');
     }
 
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      throw new Error('网络连接失败 - 请检查网络连接或代理设置');
+      throw new Error('网络连接失败 - 请检查 API Base URL 是否正确或尝试启用 CORS 代理');
     }
 
     throw error;

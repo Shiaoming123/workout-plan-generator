@@ -1,5 +1,7 @@
 // ============ User Input Types ============
 
+import type { CustomAPIConfig } from './api';
+
 export type Goal = 'fat_loss' | 'muscle_gain' | 'fitness' | 'rehab' | 'general';
 export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 export type Experience = 'beginner' | 'intermediate' | 'advanced';
@@ -51,6 +53,7 @@ export interface UserProfile {
   experienceNotes?: string; // 经验补充说明
   equipmentNotes?: string; // 器械补充说明
   preferencesNotes?: string; // 其他偏好说明
+  customAPI?: CustomAPIConfig; // ✅ 新增：自定义 API 配置
 }
 
 // ============ Exercise & Workout Types ============
