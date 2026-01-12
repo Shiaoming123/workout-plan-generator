@@ -11,7 +11,7 @@
 
 | 变量名 | 值 | 环境 |
 |--------|-----|------|
-| `VITE_DEEPSEEK_API_KEY` | `sk-97fe737845bc4b6bbc9149ec40d9e4a7` | Production, Preview, Development |
+| `VITE_DEEPSEEK_API_KEY` | `sk-*******************9e4a7` | Production, Preview, Development |
 | `VITE_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Production, Preview, Development |
 
 5. 点击 **Save** 保存
@@ -28,7 +28,7 @@ vercel login
 
 # 设置环境变量
 vercel env add VITE_DEEPSEEK_API_KEY
-# 输入值: sk-97fe737845bc4b6bbc9149ec40d9e4a7
+# 输入值: sk-*******************9e4a7
 # 选择环境: Production, Preview, Development (全选)
 
 vercel env add VITE_DEEPSEEK_BASE_URL
