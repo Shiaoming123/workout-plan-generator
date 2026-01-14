@@ -234,14 +234,29 @@ function PhaseDisplay({ title, sets }: { title: string; sets: WorkoutSet[] }) {
 }
 
 function SetDisplay({ set }: { set: WorkoutSet }) {
-  const exercise = getExerciseById(set.exerciseId);
-  if (!exercise) return null;
+  // 优先使用 set 中的动作名称（AI 生成时包含），否则从数据库查找（规则引擎）
+  let name = set.name;
+  let nameZh = set.nameZh;
+
+  if (!name || !nameZh) {
+    const exercise = getExerciseById(set.exerciseId);
+    if (exercise) {
+      name = exercise.name;
+      nameZh = exercise.nameZh;
+    }
+  }
+
+  // 如果还是找不到名称，返回 null（不应该发生）
+  if (!name || !nameZh) {
+    console.error('无法找到动作信息，exerciseId:', set.exerciseId);
+    return null;
+  }
 
   return (
     <div className="text-sm bg-gray-50 p-2 rounded">
       <div className="font-medium text-gray-800">
-        {exercise.nameZh}{' '}
-        <span className="text-gray-500 text-xs">({exercise.name})</span>
+        {nameZh}{' '}
+        <span className="text-gray-500 text-xs">({name})</span>
       </div>
       <div className="text-gray-600 mt-1">
         {set.sets && <span>{set.sets}组</span>}

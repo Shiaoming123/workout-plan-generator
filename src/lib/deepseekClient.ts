@@ -83,7 +83,22 @@ export async function callDeepSeekStreaming(
   console.log('  - Model:', finalModel);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000); // 流式请求延长超时时间
+  const IDLE_TIMEOUT = 120000; // 120 秒无数据则超时
+  let timeout: number | undefined;
+
+  // 重置超时计时器的函数（每次收到数据就调用）
+  const resetTimeout = () => {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => {
+      console.error('[LLM API Streaming] 连接空闲超时（120秒无数据）');
+      controller.abort();
+    }, IDLE_TIMEOUT) as unknown as number;
+  };
+
+  // 初始超时
+  resetTimeout();
 
   const url = `${config.baseUrl}/v1/chat/completions`;
 
@@ -96,6 +111,12 @@ export async function callDeepSeekStreaming(
   };
 
   console.log('[LLM API Streaming] 发起流式请求...');
+  console.log('[LLM API Streaming] ⏱️  超时机制: 120秒无数据则中断（持续接收数据时不超时）');
+
+  // 在 try 块外声明，以便在 catch 块中访问
+  let fullContent = '';
+  let fullReasoning = '';
+  let totalTokens = 0;
 
   try {
     const headers: Record<string, string> = {
@@ -131,14 +152,20 @@ export async function callDeepSeekStreaming(
     }
 
     const decoder = new TextDecoder();
-    let fullContent = '';
-    let fullReasoning = '';
-    let totalTokens = 0;
+    let chunkCount = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+
+        if (done) {
+          console.log('[LLM API Streaming] ✅ 流读取完成');
+          break;
+        }
+
+        // ✅ 关键修复：每次收到数据就重置超时计时器
+        resetTimeout();
+        chunkCount++;
 
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n').filter(line => line.trim() !== '');
@@ -147,7 +174,7 @@ export async function callDeepSeekStreaming(
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              console.log('[LLM API Streaming] 流式传输完成');
+              console.log('[LLM API Streaming] 收到 [DONE] 标记');
               continue;
             }
 
@@ -175,9 +202,13 @@ export async function callDeepSeekStreaming(
           }
         }
       }
+
+      console.log(`[LLM API Streaming] 📊 统计: 共接收 ${chunkCount} 个数据块`);
     } finally {
       reader.releaseLock();
-      clearTimeout(timeout);
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
     }
 
     const duration = Date.now() - startTime;
@@ -203,8 +234,22 @@ export async function callDeepSeekStreaming(
     console.error(`[LLM API Streaming] 请求失败 (耗时: ${duration}ms)`);
     console.error('  - 错误:', error.message);
 
+    // 记录已接收的数据量（用于调试）
+    if (fullContent || fullReasoning) {
+      console.error(`  - 已接收数据: 推理内容 ${fullReasoning.length} 字符, 实际内容 ${fullContent.length} 字符`);
+    }
+
     if (error.name === 'AbortError') {
-      throw new Error('流式 API 请求超时（120秒）');
+      // 区分是否已经接收到数据
+      if (fullReasoning.length > 0 || fullContent.length > 0) {
+        throw new Error(
+          `流式 API 连接中断：120秒内未接收到新数据。` +
+          `已接收推理内容 ${fullReasoning.length} 字符，实际内容 ${fullContent.length} 字符。` +
+          `建议：Reasoner 模型推理时间较长，如果推理过程正常显示，说明 API 工作正常，可能需要更长等待时间。`
+        );
+      } else {
+        throw new Error('流式 API 请求超时：120秒内未接收到任何数据');
+      }
     }
 
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
@@ -213,7 +258,9 @@ export async function callDeepSeekStreaming(
 
     throw error;
   } finally {
-    clearTimeout(timeout);
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
   }
 }
 

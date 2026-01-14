@@ -112,10 +112,24 @@ function formatWeek(week: any): string {
  * 格式化单个动作组
  */
 function formatSet(set: WorkoutSet): string {
-  const exercise = getExerciseById(set.exerciseId);
-  if (!exercise) return '';
+  // 优先使用 set 中的动作名称（AI 生成时包含），否则从数据库查找
+  let name = set.name;
+  let nameZh = set.nameZh;
 
-  let line = `  • ${exercise.nameZh} (${exercise.name})`;
+  if (!name || !nameZh) {
+    const exercise = getExerciseById(set.exerciseId);
+    if (exercise) {
+      name = exercise.name;
+      nameZh = exercise.nameZh;
+    }
+  }
+
+  if (!name || !nameZh) {
+    console.error('无法找到动作信息，exerciseId:', set.exerciseId);
+    return '';
+  }
+
+  let line = `  • ${nameZh} (${name})`;
 
   if (set.sets) {
     line += ` - ${set.sets}组`;
