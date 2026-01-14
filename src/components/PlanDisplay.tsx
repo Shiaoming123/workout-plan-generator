@@ -76,8 +76,8 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
                   )}
                 </div>
 
-                {/* 月内周计划 */}
-                <div className="ml-6 space-y-4">
+                {/* 月内周计划 - 优化间距 */}
+                <div className="space-y-4">
                   {month.weeks.map((week) => (
                     <WeekCard
                       key={week.weekNumber}

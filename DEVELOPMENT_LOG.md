@@ -6,6 +6,158 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-14 20:30] - 布局优化：实现生成后自适应布局
+
+### Operation | 操作
+
+**问题背景：**
+- 用户测试 Phase 1 卡片化 UI 后，发现左右布局导致训练计划显示区域过窄
+- 右侧 50% 宽度内显示卡片，导致内容挤在一起，卡片变得又窄又长
+- `WeekCard` 内部 2 列网格在半屏下变成单列，需要大量滚动
+- 用户体验不佳，需要更宽的显示空间
+
+**解决方案：**
+实现"生成后自适应布局"（方案 A）：
+- **未生成时**：保持左右布局（表单 50% | 空状态提示 50%）
+- **生成后**：
+  - 表单自动收起到顶部，变成可折叠卡片（默认折叠）
+  - 训练计划占据全宽（100%）显示，内部最大宽度 `max-w-7xl`
+  - 用户可点击展开表单，修改参数重新生成
+
+### Files Modified | 修改的文件
+
+**1. `src/App.tsx:9-180` - 重构主布局逻辑**
+
+**关键修改：**
+```typescript
+// ✅ 新增：表单折叠状态
+const [formCollapsed, setFormCollapsed] = useState(false);
+
+const handleGenerate = async (profile: UserProfile) => {
+  // ... 生成逻辑
+  setPlan(newPlan);
+  setFormCollapsed(true); // ✅ 生成成功后自动折叠表单
+};
+
+// ✅ 条件渲染：根据是否有计划切换布局
+{!plan ? (
+  /* 未生成时：左右布局 */
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div><InputForm onGenerate={handleGenerate} /></div>
+    <div>{/* 空状态或流式显示 */}</div>
+  </div>
+) : (
+  /* 生成后：上下布局 */
+  <div className="space-y-6">
+    {/* 可折叠的表单卡片 */}
+    <div className="bg-white rounded-xl shadow-card">
+      <button onClick={() => setFormCollapsed(!formCollapsed)}>
+        {/* 表单头部 */}
+      </button>
+      {!formCollapsed && (
+        <div className="p-6">
+          <div className="max-w-3xl mx-auto">
+            <InputForm onGenerate={handleGenerate} />
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* 训练计划全宽显示（max-w-7xl 居中）*/}
+    <div className="max-w-7xl mx-auto">
+      <PlanDisplay plan={plan} />
+    </div>
+  </div>
+)}
+```
+
+**2. `src/components/cards/WeekCard.tsx:71` - 优化日卡片网格**
+
+```typescript
+// 之前：lg:grid-cols-2（桌面 2 列）
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+// 现在：md:grid-cols-2 xl:grid-cols-3（全宽时最多 3 列）
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+```
+
+**3. `src/components/PlanDisplay.tsx:80` - 移除月度计划缩进**
+
+```typescript
+// 之前：ml-6（左边距导致空间浪费）
+<div className="ml-6 space-y-4">
+
+// 现在：移除缩进，利用完整宽度
+<div className="space-y-4">
+```
+
+### Results | 结果
+
+✅ **布局问题已解决：**
+- 未生成时：保持原有左右布局，用户体验不变
+- 生成后：训练计划占据全宽，卡片不再挤在一起
+- 表单收起到顶部，可随时展开修改参数
+
+✅ **视觉效果优化：**
+- 训练计划使用 `max-w-7xl`（最大 1280px）居中显示，避免过宽
+- 日卡片网格在大屏幕下最多显示 3 列，更好利用空间
+- 表单折叠后有清晰的视觉指示（图标 + 说明文字）
+
+✅ **交互流程优化：**
+- 生成完成自动折叠表单，用户直接看到训练计划
+- 点击表单卡片头部可展开/收起，操作直观
+- 表单展开后内部使用 `max-w-3xl` 居中，不会过宽
+
+✅ **响应式布局：**
+- 移动端（< md）：单列显示
+- 平板端（md - xl）：2 列显示
+- 桌面端（≥ xl）：3 列显示
+- 全宽布局下各断点都有良好的视觉效果
+
+### Testing | 测试
+
+- [x] 本地构建成功 (`npm run build`)
+- [x] TypeScript 编译通过（无类型错误）
+- [x] 包体积检查：CSS 42.77 KB, JS 366.90 KB（轻微增长，可接受）
+- [ ] 需要用户测试：未生成时的左右布局
+- [ ] 需要用户测试：生成后的全宽显示效果
+- [ ] 需要用户测试：表单折叠/展开交互
+- [ ] 需要用户测试：不同屏幕尺寸下的响应式效果
+
+### Notes | 备注
+
+**设计决策：**
+1. **为什么不是始终上下布局？**
+   - 未生成时左右布局更紧凑，用户可以对照说明填写表单
+   - 生成后用户主要关注训练计划，表单可以收起节省空间
+
+2. **为什么默认折叠表单？**
+   - 生成成功后用户主要需求是查看训练计划，而非修改参数
+   - 折叠表单可以立即展示训练计划，减少滚动
+   - 需要修改时可以快速展开，不影响二次生成
+
+3. **为什么使用 max-w-7xl？**
+   - 1280px 是常见的内容最大宽度，避免超宽屏下卡片过宽
+   - 内容居中显示，两侧留白，视觉更平衡
+   - 参考了主流网站（GitHub, Tailwind UI）的内容宽度
+
+4. **为什么日卡片最多 3 列？**
+   - 每张日卡片需要足够宽度展示动作详情
+   - 3 列是最佳平衡点：利用空间 + 可读性
+   - 4 列会导致卡片过窄，内容挤在一起
+
+**技术亮点：**
+- 条件渲染实现两种布局模式，无需路由切换
+- 使用 `useState` 管理表单折叠状态，简单高效
+- 利用 Tailwind 响应式类，无需额外 CSS
+- 表单卡片复用了 `WeekCard` 的视觉风格，保持一致性
+
+**用户反馈：**
+- 原问题："右边内容输出之后挤在一起，让卡片内容的显示变得窄且长"
+- 预期效果：生成后训练计划全宽显示，卡片不会挤在一起
+
+---
+
 ## [2026-01-14 19:00] - Phase 1: 卡片化 UI 重构完成
 
 ### Operation | 操作
