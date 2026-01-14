@@ -67,8 +67,8 @@ export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
             </div>
           )}
 
-          {/* 日训练卡片 - 响应式网格（最多3列，根据屏幕宽度自适应）*/}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* 日训练卡片 - 横向滚动布局 */}
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
             {week.sessions.map((session) => (
               <DayCard key={session.dayNumber} session={session} />
             ))}

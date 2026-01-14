@@ -20,7 +20,7 @@ export default function DayCard({ session }: DayCardProps) {
   const totalExercises = Object.values(phaseStats).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300 flex-shrink-0 w-80">
       {/* 卡片头部 - 可点击 */}
       <button
         onClick={() => setExpanded(!expanded)}
