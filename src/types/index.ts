@@ -82,6 +82,8 @@ export interface Exercise {
 
 export interface WorkoutSet {
   exerciseId: string;
+  name?: string; // 动作英文名（AI 生成时会包含）
+  nameZh?: string; // 动作中文名（AI 生成时会包含）
   sets?: number;
   reps?: number | string; // "10-12" or "AMRAP"
   duration?: number; // seconds
