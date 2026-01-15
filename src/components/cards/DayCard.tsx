@@ -20,7 +20,7 @@ export default function DayCard({ session }: DayCardProps) {
   const totalExercises = Object.values(phaseStats).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300 flex-shrink-0 w-80">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300">
       {/* 卡片头部 - 可点击 */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -69,46 +69,49 @@ export default function DayCard({ session }: DayCardProps) {
 
       {/* 卡片内容 - 条件渲染 */}
       {expanded && (
-        <div className="px-5 pb-5 space-y-4 border-t border-gray-100">
-          {/* 热身 */}
-          {phaseStats.warmup > 0 && (
-            <PhaseSection
-              title="热身"
-              icon="🔥"
-              color="warmup"
-              sets={session.phases.warmup}
-            />
-          )}
+        <div className="px-5 pb-5 border-t border-gray-100">
+          {/* 四个阶段横向排列 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+            {/* 热身 */}
+            {phaseStats.warmup > 0 && (
+              <PhaseSection
+                title="热身"
+                icon="🔥"
+                color="warmup"
+                sets={session.phases.warmup}
+              />
+            )}
 
-          {/* 主训练 */}
-          {phaseStats.main > 0 && (
-            <PhaseSection
-              title="主训练"
-              icon="💪"
-              color="main"
-              sets={session.phases.main}
-            />
-          )}
+            {/* 主训练 */}
+            {phaseStats.main > 0 && (
+              <PhaseSection
+                title="主训练"
+                icon="💪"
+                color="main"
+                sets={session.phases.main}
+              />
+            )}
 
-          {/* 辅助训练 */}
-          {phaseStats.accessory > 0 && (
-            <PhaseSection
-              title="辅助训练"
-              icon="⚡"
-              color="accessory"
-              sets={session.phases.accessory}
-            />
-          )}
+            {/* 辅助训练 */}
+            {phaseStats.accessory > 0 && (
+              <PhaseSection
+                title="辅助训练"
+                icon="⚡"
+                color="accessory"
+                sets={session.phases.accessory}
+              />
+            )}
 
-          {/* 放松拉伸 */}
-          {phaseStats.cooldown > 0 && (
-            <PhaseSection
-              title="放松拉伸"
-              icon="🧘"
-              color="cooldown"
-              sets={session.phases.cooldown}
-            />
-          )}
+            {/* 放松拉伸 */}
+            {phaseStats.cooldown > 0 && (
+              <PhaseSection
+                title="放松拉伸"
+                icon="🧘"
+                color="cooldown"
+                sets={session.phases.cooldown}
+              />
+            )}
+          </div>
 
           {/* 备注（如有）*/}
           {session.notes && (
@@ -163,7 +166,7 @@ function PhaseSection({ title, icon, color, sets }: PhaseSectionProps) {
   const colors = colorClasses[color];
 
   return (
-    <div className="pt-4">
+    <div>
       {/* 阶段标题 */}
       <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg mb-3 ${colors.bg} ${colors.border} border`}>
         <span>{icon}</span>

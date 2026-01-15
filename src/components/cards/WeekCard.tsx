@@ -67,8 +67,8 @@ export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
             </div>
           )}
 
-          {/* 日训练卡片 - 横向滚动布局 */}
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
+          {/* 日训练卡片 - 纵向堆叠 */}
+          <div className="space-y-4">
             {week.sessions.map((session) => (
               <DayCard key={session.dayNumber} session={session} />
             ))}
