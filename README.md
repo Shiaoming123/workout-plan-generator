@@ -9,6 +9,30 @@
 
 ## ✨ 功能特性
 
+### 🎨 卡片化 UI 设计
+- **现代化卡片布局**：训练计划以精美的卡片形式展示，视觉层次清晰
+- **可折叠交互**：所有卡片支持展开/收起，快速浏览关键信息
+- **智能配色方案**：不同训练日采用不同颜色边框（蓝/绿/紫/橙/粉/靛/青），易于区分
+- **自适应响应式布局**：
+  - 生成前：左右布局（表单 + 实时输出）
+  - 生成后：表单自动折叠，训练计划全宽显示，最大化浏览体验
+- **平滑动画效果**：
+  - 三点跳动加载动画
+  - 光标闪烁模拟打字效果
+  - 卡片悬停阴影增强
+  - 进度条平滑过渡
+
+### 📊 进度可视化
+- **实时进度条**：按周生成时显示当前进度（第 X/Y 周）
+- **百分比显示**：直观展示生成完成度
+- **智能分批生成**：月/季度计划按周分批生成，避免超出 AI token 限制
+- **用户友好提示**：生成过程中提供实时状态说明
+
+### 🛑 生成控制
+- **一键中断**：用户可随时点击"中断生成"按钮停止 AI 生成
+- **安全清理**：中断后自动清理状态，无需刷新页面
+- **无缝重试**：支持立即重新生成
+
 ### 🤖 AI 智能生成
 - **双模型支持**：
   - `deepseek-chat`：快速生成（10-30秒），适合日常使用
@@ -34,6 +58,42 @@
 - **离线可用**：纯前端应用，无需后端
 
 ## 🎥 功能演示
+
+### UI 交互示例
+```
+生成前（左右布局）：
+┌─────────────┬─────────────┐
+│  输入表单    │  实时输出区  │
+│  （左侧）    │  （右侧）    │
+│             │  - 流式内容  │
+│             │  - 进度条    │
+│             │  - 中断按钮  │
+└─────────────┴─────────────┘
+
+生成后（全宽布局）：
+┌─────────────────────────┐
+│  📁 个人信息与目标 [▼]   │  ← 可折叠
+└─────────────────────────┘
+         ↓
+┌─────────────────────────┐
+│  📋 训练计划（全宽显示）  │
+│  - Week 1 卡片           │
+│    ├─ Day 1 [蓝色]      │
+│    ├─ Day 2 [绿色]      │
+│    └─ Day 3 [紫色]      │
+│  - Week 2 卡片           │
+└─────────────────────────┘
+```
+
+### 进度条示例
+```
+正在生成月计划（4周）：
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50%
+正在生成第 2/4 周
+
+💡 提示：每周计划单独生成，避免超出 token 限制
+```
 
 ### AI 生成示例
 ```
@@ -99,9 +159,15 @@ workout-plan-generator/
 │   │   ├── Header.tsx           # 页面头部
 │   │   ├── InputForm.tsx        # 输入表单（含 API 配置）
 │   │   ├── PlanDisplay.tsx      # 计划展示
-│   │   ├── StreamingDisplay.tsx # 流式内容显示
+│   │   ├── StreamingDisplay.tsx # 流式内容显示（含进度条、中断按钮）
 │   │   ├── ReasoningDisplay.tsx # 推理过程显示
-│   │   └── ExportButtons.tsx    # 导出按钮
+│   │   ├── ExportButtons.tsx    # 导出按钮
+│   │   └── cards/               # 卡片化 UI 组件
+│   │       ├── DayCard.tsx      # 训练日卡片（可折叠、彩色边框）
+│   │       ├── ExerciseCard.tsx # 动作卡片
+│   │       ├── MetadataCard.tsx # 元数据卡片（生成方式、降级原因等）
+│   │       ├── SummaryCard.tsx  # 计划概览卡片
+│   │       └── WeekCard.tsx     # 周计划卡片（横向滚动）
 │   ├── data/                    # 数据与模板
 │   │   ├── exercises.ts         # 动作数据库（100+ 动作）
 │   │   └── templates.ts         # 训练模板与周期化策略
@@ -138,6 +204,51 @@ workout-plan-generator/
 - **样式**: Tailwind CSS
 - **AI 集成**: OpenAI 兼容 API（支持 DeepSeek、OpenAI、Azure 等）
 - **架构**: 纯前端，无后端依赖
+- **状态管理**: React Hooks（useState, useEffect, useRef）
+
+### UI 架构设计
+
+**卡片组件系统**：
+```
+PlanDisplay
+  ├── SummaryCard（计划概览）
+  ├── MetadataCard（生成元数据）
+  └── WeekCard（周计划容器）
+      └── DayCard（训练日卡片）
+          ├── ExerciseCard（动作卡片）
+          └── 可折叠展开/收起
+```
+
+**状态管理流程**：
+```
+App.tsx
+  ├── plan（生成的计划）
+  ├── loading（加载状态）
+  ├── isStreaming（流式输出状态）
+  ├── streamContent（流式内容）
+  ├── progress（进度：{ current, total }）
+  ├── abortController（中断控制器）
+  └── formCollapsed（表单折叠状态）
+```
+
+**布局自适应策略**：
+```typescript
+// 生成前
+{!plan && (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <InputForm />        {/* 左侧表单 */}
+    <StreamingDisplay /> {/* 右侧输出 */}
+  </div>
+)}
+
+// 生成后
+{plan && (
+  <div className="space-y-6">
+    <CollapsibleForm />  {/* 可折叠表单 */}
+    <PlanDisplay />      {/* 全宽计划 */}
+  </div>
+)}
+```
 
 ### 双生成系统
 
@@ -158,6 +269,7 @@ workout-plan-generator/
 1. 优先尝试 AI 生成（流式输出，实时显示）
 2. 如果 API 未配置或调用失败，自动降级到规则引擎
 3. 所有计划包含元数据，标注生成方式（`ai` 或 `rule-based`）
+4. 月/季度计划按周分批生成，避免超出 AI token 限制
 
 ### AI 生成逻辑
 
@@ -183,6 +295,40 @@ validateTrainingPlan(plan);
 
 // 5. 添加元数据并返回
 return enrichPlanWithMetadata(plan, { method: 'ai', model, ... });
+```
+
+**按周分批生成（月/季度计划）**：
+```typescript
+// 检测是否需要分批生成
+if (period === 'month' || period === 'quarter') {
+  const weeksCount = period === 'month' ? 4 : 12;
+  const weeks: TrainingWeek[] = [];
+
+  // 逐周生成，避免超出 token 限制
+  for (let i = 1; i <= weeksCount; i++) {
+    // 更新进度
+    onProgress?.(i, weeksCount);
+
+    // 为每周生成独立计划
+    const weekPlan = await generateSingleWeek(profile, i);
+    weeks.push(weekPlan);
+  }
+
+  return { weeks };
+}
+```
+
+**中断机制**：
+```typescript
+// 创建中断控制器
+const controller = new AbortController();
+const signal = controller.signal;
+
+// 传递给 API 调用
+await callDeepSeekStreaming(model, messages, { signal }, onChunk);
+
+// 用户点击中断按钮
+controller.abort(); // 立即停止生成
 ```
 
 **超时机制**：
@@ -519,6 +665,25 @@ CMD ["nginx", "-g", "daemon off;"]
 - [x] 自动降级机制
 - [x] 推理过程可视化
 - [x] 智能超时机制
+- [x] **卡片化 UI 重构**（Phase 1）
+  - [x] DayCard、ExerciseCard、MetadataCard、SummaryCard、WeekCard
+  - [x] 可折叠交互设计
+  - [x] 智能彩色边框系统
+- [x] **进度可视化**
+  - [x] 实时进度条（按周生成）
+  - [x] 百分比显示
+  - [x] 智能分批生成（避免 token 限制）
+- [x] **生成控制**
+  - [x] 一键中断功能
+  - [x] 安全状态清理
+- [x] **自适应布局**
+  - [x] 生成前：左右布局
+  - [x] 生成后：表单折叠 + 全宽显示
+- [x] **动画优化**
+  - [x] 加载动画（三点跳动）
+  - [x] 光标闪烁效果
+  - [x] 卡片悬停效果
+  - [x] 进度条平滑过渡
 
 ### 🚧 进行中
 - [ ] 单元测试覆盖
