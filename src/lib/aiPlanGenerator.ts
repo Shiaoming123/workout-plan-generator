@@ -1,6 +1,6 @@
 import type { UserProfile, TrainingPlan } from '../types';
 import { callDeepSeek, callDeepSeekStreaming, parseAIResponse, isAPIConfigured } from './deepseekClient';
-import { buildSystemPrompt, buildUserPrompt } from './promptTemplates';
+import { buildSystemPrompt, buildUserPrompt, buildSingleWeekUserPrompt } from './promptTemplates';
 import {
   validateTrainingPlan,
   enrichPlanWithMetadata,
@@ -13,11 +13,15 @@ import { generateRuleBasedPlan } from './planGenerator';
  *
  * @param profile - 用户资料
  * @param onStreamUpdate - 流式更新回调函数，用于实时显示生成内容
+ * @param onProgressUpdate - 进度更新回调函数（可选，用于按周生成）
+ * @param abortSignal - 中断信号（可选）
  * @returns 完整的训练计划（包含元数据）
  */
 export async function generateAIPlanStreaming(
   profile: UserProfile,
-  onStreamUpdate: (content: string, reasoning: string) => void
+  onStreamUpdate: (content: string, reasoning: string) => void,
+  onProgressUpdate?: (current: number, total: number) => void,
+  abortSignal?: AbortSignal
 ): Promise<TrainingPlan> {
   // 检查 API 配置
   if (!isAPIConfigured(profile.customAPI)) {
@@ -27,6 +31,12 @@ export async function generateAIPlanStreaming(
       fallbackReason: 'API Key 未配置',
       generatedAt: new Date().toISOString(),
     });
+  }
+
+  // 判断是否需要分批生成（月计划或季度计划）
+  if (profile.period === 'month' || profile.period === 'quarter') {
+    console.log('📋 检测到长周期计划，使用按周分批生成策略');
+    return generatePlanByWeek(profile, onStreamUpdate, onProgressUpdate, abortSignal);
   }
 
   try {
@@ -56,7 +66,8 @@ export async function generateAIPlanStreaming(
           streamedContent += delta;
         }
         onStreamUpdate(streamedContent, streamedReasoning);
-      }
+      },
+      abortSignal // ✅ 传递中断信号
     );
 
     console.log('✅ 流式 API 调用成功');
@@ -218,4 +229,234 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
       generatedAt: new Date().toISOString(),
     });
   }
+}
+
+/**
+ * 生成单周计划（用于分批生成）
+ *
+ * 支持流式和非流式两种模式
+ */
+async function generateSingleWeekPlan(
+  profile: UserProfile,
+  weekNumber: number,
+  totalWeeks: number,
+  previousWeekSummary?: string,
+  onStreamUpdate?: (content: string, reasoning: string) => void,
+  abortSignal?: AbortSignal
+): Promise<any> {
+  const systemPrompt = buildSystemPrompt();
+  const userPrompt = buildSingleWeekUserPrompt(
+    profile,
+    weekNumber,
+    totalWeeks,
+    previousWeekSummary
+  );
+
+  console.log(`🤖 开始生成第 ${weekNumber}/${totalWeeks} 周...`);
+
+  // 检查是否被中断
+  if (abortSignal?.aborted) {
+    throw new Error('用户取消了生成');
+  }
+
+  // ✅ 如果有流式回调，使用流式 API；否则使用非流式 API（更快）
+  if (onStreamUpdate) {
+    // 流式模式
+    let streamedContent = '';
+    let streamedReasoning = '';
+
+    const result = await callDeepSeekStreaming(
+      profile.aiModel,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      undefined,
+      profile.customAPI,
+      (delta: string, isReasoning: boolean) => {
+        if (isReasoning) {
+          streamedReasoning += delta;
+        } else {
+          streamedContent += delta;
+        }
+        onStreamUpdate(streamedContent, streamedReasoning);
+      },
+      abortSignal
+    );
+
+    console.log(`✅ 第 ${weekNumber} 周生成成功（流式）`);
+    const parsed = parseAIResponse(result.content);
+    return parsed;
+  } else {
+    // 非流式模式（并行生成时使用）
+    const result = await callDeepSeek(
+      profile.aiModel,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      undefined,
+      profile.customAPI
+    );
+
+    console.log(`✅ 第 ${weekNumber} 周生成成功（非流式）`);
+    const parsed = parseAIResponse(result.content);
+    return parsed;
+  }
+}
+
+/**
+ * 按周分批生成完整计划（月计划或季度计划）
+ */
+/**
+ * 并行生成多周计划（优化版）
+ *
+ * 使用 Promise.all 并行生成所有周，大幅提升速度
+ */
+export async function generatePlanByWeek(
+  profile: UserProfile,
+  onStreamUpdate: (content: string, reasoning: string) => void,
+  onProgressUpdate?: (current: number, total: number) => void,
+  abortSignal?: AbortSignal
+): Promise<TrainingPlan> {
+  const totalWeeks = profile.period === 'month' ? 4 : 12;
+  let completedWeeks = 0;
+
+  console.log(`📋 开始并行生成 ${totalWeeks} 周计划...`);
+
+  try {
+    // ✅ 并行生成所有周
+    const weekPromises = Array.from({ length: totalWeeks }, (_, index) => {
+      const weekNum = index + 1;
+
+      return generateSingleWeekPlan(
+        profile,
+        weekNum,
+        totalWeeks,
+        undefined,
+        undefined, // ✅ 关闭流式显示，避免混乱
+        abortSignal
+      ).then((weekPlan) => {
+        // 每完成一周，更新进度
+        completedWeeks++;
+        if (onProgressUpdate) {
+          onProgressUpdate(completedWeeks, totalWeeks);
+        }
+        console.log(`✅ 已完成 ${completedWeeks}/${totalWeeks} 周`);
+
+        // 显示简单的进度信息
+        onStreamUpdate(
+          `已完成 ${completedWeeks}/${totalWeeks} 周计划\n等待所有周生成完毕后显示结果...`,
+          ''
+        );
+
+        return weekPlan;
+      });
+    });
+
+    // 等待所有周生成完成
+    const weeks = await Promise.all(weekPromises);
+
+    // 组装完整计划
+    const plan = assemblePlan(profile, weeks);
+    console.log('🎉 并行生成完成！');
+    return plan;
+  } catch (error: any) {
+    console.error('❌ 并行生成失败:', error.message);
+    console.warn('⚙️  降级到规则引擎');
+    return generateRuleBasedPlan(profile, {
+      method: 'rule-based',
+      fallbackReason: `并行生成失败: ${error.message}`,
+      generatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+/**
+ * 组装完整计划（从多个周计划）
+ */
+function assemblePlan(profile: UserProfile, weeks: any[]): TrainingPlan {
+  const period = profile.period === 'month' ? 'month' : 'quarter';
+
+  // 创建计划摘要
+  const summary = {
+    goal: profile.goal,
+    goalZh: getGoalLabel(profile.goal),
+    daysPerWeek: profile.daysPerWeek,
+    sessionMinutes: profile.sessionMinutes,
+    totalWeeks: weeks.length,
+    phaseDescription: `${weeks.length}周渐进式训练计划`,
+    safetyNotes: profile.constraints.length > 0
+      ? `已根据身体限制调整训练内容`
+      : undefined,
+  };
+
+  // 根据周期类型组装
+  if (period === 'month') {
+    return enrichPlanWithMetadata(
+      {
+        period: 'month',
+        summary,
+        generatedAt: new Date().toISOString(),
+        months: [
+          {
+            monthNumber: 1,
+            monthName: '第1月',
+            weeks,
+          },
+        ],
+      },
+      {
+        method: 'ai',
+        model: profile.aiModel,
+        generatedAt: new Date().toISOString(),
+      }
+    );
+  } else {
+    // 季度计划：分成3个月
+    return enrichPlanWithMetadata(
+      {
+        period: 'quarter',
+        summary,
+        generatedAt: new Date().toISOString(),
+        months: [
+          {
+            monthNumber: 1,
+            monthName: '第1月 - 适应期',
+            weeks: weeks.slice(0, 4),
+          },
+          {
+            monthNumber: 2,
+            monthName: '第2月 - 积累期',
+            weeks: weeks.slice(4, 8),
+          },
+          {
+            monthNumber: 3,
+            monthName: '第3月 - 强化期',
+            weeks: weeks.slice(8, 12),
+          },
+        ],
+      },
+      {
+        method: 'ai',
+        model: profile.aiModel,
+        generatedAt: new Date().toISOString(),
+      }
+    );
+  }
+}
+
+/**
+ * 获取目标标签
+ */
+function getGoalLabel(goal: string): string {
+  const labels: Record<string, string> = {
+    fat_loss: '减脂',
+    muscle_gain: '增肌',
+    fitness: '综合体能',
+    strength: '力量提升',
+    endurance: '耐力提升',
+    rehabilitation: '康复训练',
+  };
+  return labels[goal] || goal;
 }

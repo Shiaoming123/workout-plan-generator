@@ -245,3 +245,150 @@ ${periodLabels[profile.period].details}
 ## 🎯 输出格式
 **仅返回符合 TrainingPlan 接口的纯 JSON 对象，不要任何额外文本、解释或 markdown 标记。**`;
 }
+
+/**
+ * 构建单周计划的用户 Prompt（用于分批生成）
+ */
+export function buildSingleWeekUserPrompt(
+  profile: UserProfile,
+  weekNumber: number,
+  totalWeeks: number,
+  previousWeekSummary?: string
+): string {
+  const goalLabels: Record<string, string> = {
+    fat_loss: '减脂（Fat Loss）',
+    muscle_gain: '增肌（Muscle Gain）',
+    fitness: '综合体能提升（General Fitness）',
+    strength: '力量提升（Strength）',
+    endurance: '耐力提升（Endurance）',
+    rehabilitation: '康复训练（Rehabilitation）',
+  };
+
+  const experienceLabels: Record<string, string> = {
+    beginner: '初学者（0-6个月）',
+    intermediate: '中级（6个月-2年）',
+    advanced: '高级（2年以上）',
+  };
+
+  const locationLabels: Record<string, string> = {
+    gym: '健身房',
+    home: '家庭',
+    outdoor: '户外',
+  };
+
+  const equipmentLabels: Record<string, string> = {
+    bodyweight: '自重',
+    dumbbells: '哑铃',
+    barbell: '杠铃',
+    resistance_bands: '弹力带',
+    kettlebell: '壶铃',
+    pull_up_bar: '引体向上杆',
+    bench: '卧推凳',
+    yoga_mat: '瑜伽垫',
+  };
+
+  const constraintLabels: Record<string, string> = {
+    knee_issue: '膝盖问题',
+    back_issue: '腰背问题',
+    shoulder_issue: '肩部问题',
+    postpartum: '产后恢复',
+    hypertension: '高血压',
+  };
+
+  return `# 用户资料
+
+## 🎯 训练目标
+- **主要目标**：${goalLabels[profile.goal]}${profile.goalNotes ? `\n- **目标补充说明**：${profile.goalNotes}` : ''}
+
+## 💪 训练经验
+- **经验水平**：${experienceLabels[profile.experience]}${profile.experienceNotes ? `\n- **经验补充说明**：${profile.experienceNotes}` : ''}
+
+## 📅 训练安排
+- **每周训练天数**：${profile.daysPerWeek} 天
+- **每次训练时长**：${profile.sessionMinutes} 分钟
+
+## 🏋️ 场地与器械
+- **训练场地**：${locationLabels[profile.location]}
+- **可用器械**：${profile.equipment.map((e) => equipmentLabels[e]).join('、')}${profile.equipmentNotes ? `\n- **器械补充说明**：${profile.equipmentNotes}` : ''}
+
+## ⚠️ 身体限制与约束
+${
+  profile.constraints.length > 0
+    ? `- **限制项**：${profile.constraints.map((c) => constraintLabels[c]).join('、')}
+${profile.constraintNotes ? `- **详细说明**：${profile.constraintNotes}` : ''}`
+    : '- **无特殊限制**'
+}
+
+${profile.preferencesNotes ? `## 🎨 其他偏好\n${profile.preferencesNotes}\n` : ''}
+## 📋 本周计划要求
+- **当前周次**：第 ${weekNumber} 周（共 ${totalWeeks} 周）
+- **周期定位**：${getWeekPhaseDescription(weekNumber, totalWeeks)}
+${previousWeekSummary ? `\n## 📊 上周训练总结\n${previousWeekSummary}\n` : ''}
+## ✅ 动作要求（必须遵守）
+1. **每个动作必须包含**：
+   - \`name\` (英文名称)
+   - \`nameZh\` (中文名称)
+   - \`sets\` (组数)
+   - \`reps\` (次数，如 "10-12") 或 \`duration\` (秒数)
+   - \`restSec\` (休息时间)
+   - \`rpe\` (主观疲劳度 1-10)
+
+2. **动作必须匹配用户的可用器械**
+
+3. **严格避免用户的禁忌动作**（见安全第一原则）
+
+4. **每次训练包含 4 个阶段**：
+   - \`warmup\`：热身 5-10 分钟
+   - \`main\`：主训练 20-40 分钟
+   - \`accessory\`：辅助训练 5-15 分钟
+   - \`cooldown\`：放松拉伸 5-10 分钟
+
+## 🎯 输出格式
+**仅返回单周计划的 JSON 对象，格式如下：**
+\`\`\`json
+{
+  "weekNumber": ${weekNumber},
+  "weekName": "Week ${weekNumber} - [阶段名称]",
+  "notes": "[本周训练重点说明]",
+  "sessions": [
+    {
+      "dayNumber": 1,
+      "dayName": "Day 1 - [训练主题]",
+      "focus": "[训练重点]",
+      "totalMinutes": ${profile.sessionMinutes},
+      "phases": {
+        "warmup": [...],
+        "main": [...],
+        "accessory": [...],
+        "cooldown": [...]
+      }
+    }
+  ]
+}
+\`\`\`
+
+**仅返回纯 JSON 对象，不要任何额外文本、解释或 markdown 标记。**`;
+}
+
+/**
+ * 获取周次的阶段描述
+ */
+function getWeekPhaseDescription(weekNumber: number, totalWeeks: number): string {
+  if (totalWeeks === 1) {
+    return '单周完整训练';
+  }
+
+  const progress = weekNumber / totalWeeks;
+
+  if (progress <= 0.25) {
+    return '适应期 - 建立基础，学习动作模式';
+  } else if (progress <= 0.5) {
+    return '积累期 - 逐步增加训练量';
+  } else if (progress <= 0.75) {
+    return '强化期 - 提高训练强度';
+  } else if (weekNumber === totalWeeks) {
+    return '减量周 - 恢复调整，为下一周期做准备';
+  } else {
+    return '冲刺期 - 达到训练高峰';
+  }
+}
