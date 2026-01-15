@@ -38,7 +38,7 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
         )}
 
         {/* 月计划 */}
-        {plan.period === 'month' && plan.weeks && (
+        {plan.period === 'month' && plan.months && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white shadow-card-lg">
               <h2 className="text-2xl font-bold mb-2">月度训练计划</h2>
@@ -46,7 +46,7 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
                 4周渐进式训练，包含基础期、增长期、高峰期和恢复期
               </p>
             </div>
-            {plan.weeks.map((week) => (
+            {plan.months[0].weeks.map((week) => (
               <WeekCard key={week.weekNumber} week={week} />
             ))}
           </div>

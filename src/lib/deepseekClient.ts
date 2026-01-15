@@ -59,6 +59,7 @@ export function isAPIConfigured(customConfig?: CustomAPIConfig): boolean {
  * @param options - 可选配置
  * @param customConfig - 用户自定义 API 配置（优先级最高）
  * @param onChunk - 流式数据回调函数，接收每次增量内容
+ * @param abortSignal - 外部中断信号（可选）
  * @returns API 调用结果
  * @throws 如果 API 调用失败或超时
  */
@@ -70,7 +71,8 @@ export async function callDeepSeekStreaming(
     max_tokens?: number;
   } = {},
   customConfig: CustomAPIConfig | undefined,
-  onChunk: (delta: string, isReasoning: boolean) => void
+  onChunk: (delta: string, isReasoning: boolean) => void,
+  abortSignal?: AbortSignal
 ): Promise<APICallResult> {
   const config = resolveAPIConfig(customConfig);
   const startTime = Date.now();
@@ -82,9 +84,18 @@ export async function callDeepSeekStreaming(
   console.log('  - 配置来源:', config.source === 'custom' ? '用户自定义' : '环境变量');
   console.log('  - Model:', finalModel);
 
+  // 支持外部中断信号
   const controller = new AbortController();
   const IDLE_TIMEOUT = 120000; // 120 秒无数据则超时
   let timeout: number | undefined;
+
+  // 如果提供了外部中断信号，监听它
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', () => {
+      console.log('[LLM API Streaming] 收到外部中断信号');
+      controller.abort();
+    });
+  }
 
   // 重置超时计时器的函数（每次收到数据就调用）
   const resetTimeout = () => {
@@ -240,7 +251,11 @@ export async function callDeepSeekStreaming(
     }
 
     if (error.name === 'AbortError') {
-      // 区分是否已经接收到数据
+      // 检查是否是用户主动中断
+      if (abortSignal?.aborted) {
+        throw new Error('用户取消了生成');
+      }
+      // 区分是否已经接收到数据（超时中断）
       if (fullReasoning.length > 0 || fullContent.length > 0) {
         throw new Error(
           `流式 API 连接中断：120秒内未接收到新数据。` +

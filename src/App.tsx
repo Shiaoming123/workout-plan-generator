@@ -19,6 +19,12 @@ export default function App() {
   // 表单折叠状态（生成后默认折叠）
   const [formCollapsed, setFormCollapsed] = useState(false);
 
+  // 中断控制
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  // 进度状态（用于按周生成）
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
     setIsStreaming(true);
@@ -27,22 +33,44 @@ export default function App() {
     setStreamContent('');
     setStreamReasoning('');
     setFormCollapsed(false); // 生成时展开（显示流式输出）
+    setProgress(null); // 重置进度
+
+    // 创建新的中断控制器
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
-      const newPlan = await generateAIPlanStreaming(profile, (content, reasoning) => {
-        // 实时更新流式内容
-        setStreamContent(content);
-        setStreamReasoning(reasoning);
-      });
+      const newPlan = await generateAIPlanStreaming(
+        profile,
+        (content, reasoning) => {
+          // 实时更新流式内容
+          setStreamContent(content);
+          setStreamReasoning(reasoning);
+        },
+        (current, total) => {
+          // 更新进度
+          setProgress({ current, total });
+        },
+        controller.signal // 传递中断信号
+      );
 
       setPlan(newPlan);
       setFormCollapsed(true); // 生成成功后自动折叠表单
+      setProgress(null); // 完成后清空进度
     } catch (error: any) {
       console.error('生成计划失败:', error);
       setError(error.message || '生成计划失败，请稍后重试');
     } finally {
       setLoading(false);
       setIsStreaming(false);
+      setAbortController(null); // 清空控制器
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      console.log('用户请求中断生成');
+      abortController.abort();
     }
   };
 
@@ -67,6 +95,8 @@ export default function App() {
                 <StreamingDisplay
                   content={streamContent}
                   reasoning={streamReasoning}
+                  progress={progress}
+                  onCancel={handleCancel}
                 />
               )}
 

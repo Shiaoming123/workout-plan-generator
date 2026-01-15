@@ -10,16 +10,29 @@ interface WeekCardProps {
 export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
   const [expanded, setExpanded] = useState(showExpanded);
 
+  // 🎨 根据周数生成不同颜色（循环使用）
+  const colorSchemes = [
+    { border: 'border-l-blue-500', badge: 'bg-blue-500', gradient: 'from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-150' },
+    { border: 'border-l-green-500', badge: 'bg-green-500', gradient: 'from-green-50 to-green-100 hover:from-green-100 hover:to-green-150' },
+    { border: 'border-l-purple-500', badge: 'bg-purple-500', gradient: 'from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-150' },
+    { border: 'border-l-pink-500', badge: 'bg-pink-500', gradient: 'from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-150' },
+    { border: 'border-l-orange-500', badge: 'bg-orange-500', gradient: 'from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-150' },
+    { border: 'border-l-indigo-500', badge: 'bg-indigo-500', gradient: 'from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-150' },
+  ];
+
+  const colorIndex = (week.weekNumber - 1) % colorSchemes.length;
+  const colors = colorSchemes[colorIndex];
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden">
+    <div className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden border-l-4 ${colors.border}`}>
       {/* 周卡片头部 */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition-colors flex items-center justify-between text-left border-b border-gray-200"
+        className={`w-full px-6 py-4 bg-gradient-to-r ${colors.gradient} transition-colors flex items-center justify-between text-left border-b border-gray-200`}
       >
         <div className="flex items-center space-x-3">
           {/* 周数徽章 */}
-          <div className="flex items-center justify-center w-10 h-10 bg-blue-500 text-white rounded-lg font-bold text-sm">
+          <div className={`flex items-center justify-center w-10 h-10 ${colors.badge} text-white rounded-lg font-bold text-sm shadow-sm`}>
             W{week.weekNumber}
           </div>
 

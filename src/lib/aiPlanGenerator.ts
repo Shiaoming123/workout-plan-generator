@@ -13,11 +13,15 @@ import { generateRuleBasedPlan } from './planGenerator';
  *
  * @param profile - 用户资料
  * @param onStreamUpdate - 流式更新回调函数，用于实时显示生成内容
+ * @param onProgressUpdate - 进度更新回调函数（可选，用于按周生成）
+ * @param abortSignal - 中断信号（可选）
  * @returns 完整的训练计划（包含元数据）
  */
 export async function generateAIPlanStreaming(
   profile: UserProfile,
-  onStreamUpdate: (content: string, reasoning: string) => void
+  onStreamUpdate: (content: string, reasoning: string) => void,
+  onProgressUpdate?: (current: number, total: number) => void,
+  abortSignal?: AbortSignal
 ): Promise<TrainingPlan> {
   // 检查 API 配置
   if (!isAPIConfigured(profile.customAPI)) {
@@ -32,7 +36,7 @@ export async function generateAIPlanStreaming(
   // 判断是否需要分批生成（月计划或季度计划）
   if (profile.period === 'month' || profile.period === 'quarter') {
     console.log('📋 检测到长周期计划，使用按周分批生成策略');
-    return generatePlanByWeek(profile, onStreamUpdate);
+    return generatePlanByWeek(profile, onStreamUpdate, onProgressUpdate, abortSignal);
   }
 
   try {
@@ -62,7 +66,8 @@ export async function generateAIPlanStreaming(
           streamedContent += delta;
         }
         onStreamUpdate(streamedContent, streamedReasoning);
-      }
+      },
+      abortSignal // ✅ 传递中断信号
     );
 
     console.log('✅ 流式 API 调用成功');
@@ -228,13 +233,16 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
 
 /**
  * 生成单周计划（用于分批生成）
+ *
+ * 支持流式和非流式两种模式
  */
 async function generateSingleWeekPlan(
   profile: UserProfile,
   weekNumber: number,
   totalWeeks: number,
   previousWeekSummary?: string,
-  onStreamUpdate?: (content: string, reasoning: string) => void
+  onStreamUpdate?: (content: string, reasoning: string) => void,
+  abortSignal?: AbortSignal
 ): Promise<any> {
   const systemPrompt = buildSystemPrompt();
   const userPrompt = buildSingleWeekUserPrompt(
@@ -246,77 +254,119 @@ async function generateSingleWeekPlan(
 
   console.log(`🤖 开始生成第 ${weekNumber}/${totalWeeks} 周...`);
 
-  let streamedContent = '';
-  let streamedReasoning = '';
+  // 检查是否被中断
+  if (abortSignal?.aborted) {
+    throw new Error('用户取消了生成');
+  }
 
-  const result = await callDeepSeekStreaming(
-    profile.aiModel,
-    [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    undefined,
-    profile.customAPI,
-    (delta: string, isReasoning: boolean) => {
-      if (isReasoning) {
-        streamedReasoning += delta;
-      } else {
-        streamedContent += delta;
-      }
-      if (onStreamUpdate) {
+  // ✅ 如果有流式回调，使用流式 API；否则使用非流式 API（更快）
+  if (onStreamUpdate) {
+    // 流式模式
+    let streamedContent = '';
+    let streamedReasoning = '';
+
+    const result = await callDeepSeekStreaming(
+      profile.aiModel,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      undefined,
+      profile.customAPI,
+      (delta: string, isReasoning: boolean) => {
+        if (isReasoning) {
+          streamedReasoning += delta;
+        } else {
+          streamedContent += delta;
+        }
         onStreamUpdate(streamedContent, streamedReasoning);
-      }
-    }
-  );
+      },
+      abortSignal
+    );
 
-  console.log(`✅ 第 ${weekNumber} 周生成成功`);
-  const parsed = parseAIResponse(result.content);
-  return parsed;
+    console.log(`✅ 第 ${weekNumber} 周生成成功（流式）`);
+    const parsed = parseAIResponse(result.content);
+    return parsed;
+  } else {
+    // 非流式模式（并行生成时使用）
+    const result = await callDeepSeek(
+      profile.aiModel,
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      undefined,
+      profile.customAPI
+    );
+
+    console.log(`✅ 第 ${weekNumber} 周生成成功（非流式）`);
+    const parsed = parseAIResponse(result.content);
+    return parsed;
+  }
 }
 
 /**
  * 按周分批生成完整计划（月计划或季度计划）
  */
+/**
+ * 并行生成多周计划（优化版）
+ *
+ * 使用 Promise.all 并行生成所有周，大幅提升速度
+ */
 export async function generatePlanByWeek(
   profile: UserProfile,
   onStreamUpdate: (content: string, reasoning: string) => void,
-  onProgressUpdate?: (current: number, total: number) => void
+  onProgressUpdate?: (current: number, total: number) => void,
+  abortSignal?: AbortSignal
 ): Promise<TrainingPlan> {
   const totalWeeks = profile.period === 'month' ? 4 : 12;
-  const weeks: any[] = [];
+  let completedWeeks = 0;
 
-  console.log(`📋 开始按周分批生成 ${totalWeeks} 周计划...`);
+  console.log(`📋 开始并行生成 ${totalWeeks} 周计划...`);
 
   try {
-    for (let weekNum = 1; weekNum <= totalWeeks; weekNum++) {
-      // 更新进度
-      if (onProgressUpdate) {
-        onProgressUpdate(weekNum, totalWeeks);
-      }
+    // ✅ 并行生成所有周
+    const weekPromises = Array.from({ length: totalWeeks }, (_, index) => {
+      const weekNum = index + 1;
 
-      // 生成单周计划
-      const weekPlan = await generateSingleWeekPlan(
+      return generateSingleWeekPlan(
         profile,
         weekNum,
         totalWeeks,
         undefined,
-        onStreamUpdate
-      );
+        undefined, // ✅ 关闭流式显示，避免混乱
+        abortSignal
+      ).then((weekPlan) => {
+        // 每完成一周，更新进度
+        completedWeeks++;
+        if (onProgressUpdate) {
+          onProgressUpdate(completedWeeks, totalWeeks);
+        }
+        console.log(`✅ 已完成 ${completedWeeks}/${totalWeeks} 周`);
 
-      weeks.push(weekPlan);
-      console.log(`✅ 已完成 ${weekNum}/${totalWeeks} 周`);
-    }
+        // 显示简单的进度信息
+        onStreamUpdate(
+          `已完成 ${completedWeeks}/${totalWeeks} 周计划\n等待所有周生成完毕后显示结果...`,
+          ''
+        );
+
+        return weekPlan;
+      });
+    });
+
+    // 等待所有周生成完成
+    const weeks = await Promise.all(weekPromises);
 
     // 组装完整计划
     const plan = assemblePlan(profile, weeks);
-    console.log('🎉 按周分批生成完成！');
+    console.log('🎉 并行生成完成！');
     return plan;
   } catch (error: any) {
-    console.error('❌ 按周生成失败:', error.message);
+    console.error('❌ 并行生成失败:', error.message);
     console.warn('⚙️  降级到规则引擎');
     return generateRuleBasedPlan(profile, {
       method: 'rule-based',
-      fallbackReason: `按周生成失败: ${error.message}`,
+      fallbackReason: `并行生成失败: ${error.message}`,
       generatedAt: new Date().toISOString(),
     });
   }

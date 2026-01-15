@@ -3,14 +3,22 @@ import { useState, useEffect, useRef } from 'react';
 interface StreamingDisplayProps {
   content: string;
   reasoning: string;
+  progress?: { current: number; total: number } | null;
+  onCancel?: () => void;
 }
 
 /**
  * 流式输出显示组件
  *
  * 用于实时显示 AI 生成的流式内容
+ * 支持显示进度条和中断按钮
  */
-export default function StreamingDisplay({ content, reasoning }: StreamingDisplayProps) {
+export default function StreamingDisplay({
+  content,
+  reasoning,
+  progress,
+  onCancel
+}: StreamingDisplayProps) {
   const [showReasoning, setShowReasoning] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const reasoningRef = useRef<HTMLDivElement>(null);
@@ -30,14 +38,54 @@ export default function StreamingDisplay({ content, reasoning }: StreamingDispla
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="animate-pulse flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+      {/* 标题栏和中断按钮 */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="animate-pulse flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800">AI 正在生成训练计划...</h2>
         </div>
-        <h2 className="text-xl font-bold text-gray-800">AI 正在生成训练计划...</h2>
+
+        {/* 中断按钮 */}
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+            title="中断生成"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span>中断生成</span>
+          </button>
+        )}
       </div>
+
+      {/* 进度条（如果是按周生成）*/}
+      {progress && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-blue-900">
+              正在生成第 {progress.current}/{progress.total} 周
+            </span>
+            <span className="text-sm text-blue-700">
+              {Math.round((progress.current / progress.total) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-blue-700 mt-2">
+            💡 提示：每周计划单独生成，避免超出 token 限制
+          </p>
+        </div>
+      )}
 
       {/* 推理过程（如果有）*/}
       {reasoning && (

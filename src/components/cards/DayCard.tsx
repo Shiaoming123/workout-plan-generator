@@ -19,8 +19,20 @@ export default function DayCard({ session }: DayCardProps) {
 
   const totalExercises = Object.values(phaseStats).reduce((a, b) => a + b, 0);
 
+  // 🎨 根据日期生成不同颜色边框
+  const dayColors = [
+    'border-l-blue-400',
+    'border-l-green-400',
+    'border-l-purple-400',
+    'border-l-orange-400',
+    'border-l-pink-400',
+    'border-l-indigo-400',
+    'border-l-teal-400',
+  ];
+  const dayColorClass = dayColors[(session.dayNumber - 1) % dayColors.length];
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300">
+    <div className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300 border-l-4 ${dayColorClass}`}>
       {/* 卡片头部 - 可点击 */}
       <button
         onClick={() => setExpanded(!expanded)}
