@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
 import DonationsModal from './components/DonationsModal';
+import Tutorial from './components/Tutorial';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
@@ -29,6 +30,21 @@ export default function App() {
 
   // 感谢弹窗状态
   const [showDonationModal, setShowDonationModal] = useState(false);
+
+  // ✅ 新手引导状态
+  const [runTutorial, setRunTutorial] = useState(false);
+
+  // ✅ 检查是否首次访问，显示引导
+  useEffect(() => {
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    if (!hasSeenTutorial) {
+      // 首次访问，延迟1秒后显示引导（等待页面渲染完成）
+      const timer = setTimeout(() => {
+        setRunTutorial(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
@@ -106,9 +122,23 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // ✅ 新手引导完成处理
+  const handleTourComplete = () => {
+    setRunTutorial(false);
+    localStorage.setItem('hasSeenTutorial', 'true');
+  };
+
+  // ✅ 重新启动引导
+  const handleRestartTutorial = () => {
+    setRunTutorial(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header />
+      {/* ✅ 新手引导 */}
+      <Tutorial run={runTutorial} onTourComplete={handleTourComplete} />
+
+      <Header onRestartTutorial={handleRestartTutorial} />
 
       <main className="container mx-auto px-4 py-8">
         {/* 根据是否有计划，切换布局 */}
@@ -116,7 +146,7 @@ export default function App() {
           /* 未生成时：上下布局（与生成后风格统一） */
           <div className="max-w-7xl mx-auto space-y-6">
             {/* 表单区域 */}
-            <div>
+            <div id="input-form-section">
               <InputForm onGenerate={handleGenerate} />
             </div>
 
@@ -124,12 +154,14 @@ export default function App() {
             <div>
               {/* 流式生成中 */}
               {isStreaming && (
-                <StreamingDisplay
-                  content={streamContent}
-                  reasoning={streamReasoning}
-                  progress={progress}
-                  onCancel={handleCancel}
-                />
+                <div id="streaming-display">
+                  <StreamingDisplay
+                    content={streamContent}
+                    reasoning={streamReasoning}
+                    progress={progress}
+                    onCancel={handleCancel}
+                  />
+                </div>
               )}
 
               {/* 非流式加载中（降级到规则引擎时）*/}
@@ -200,13 +232,13 @@ export default function App() {
           <div className="space-y-6">
             {/* ✅ 用户信息汇总卡片（始终显示） */}
             {lastProfile && (
-              <div className="max-w-7xl mx-auto print:hidden">
+              <div className="max-w-7xl mx-auto print:hidden" id="user-profile-card">
                 <UserProfileCard profile={lastProfile} onRegenerate={handleRegenerate} />
               </div>
             )}
 
             {/* 训练计划全宽显示 */}
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto" id="plan-display">
               <PlanDisplay
                 plan={plan}
                 profile={lastProfile || undefined}

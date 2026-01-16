@@ -27,7 +27,9 @@ export default function PlanDisplay({ plan, profile, onOpenDonationModal }: Plan
       )}
 
       {/* 导出按钮 */}
-      <ExportButtons plan={plan} profile={profile} />
+      <div id="export-buttons">
+        <ExportButtons plan={plan} profile={profile} />
+      </div>
 
       {/* 训练计划内容 */}
       <div className="space-y-6">
@@ -115,7 +117,9 @@ export default function PlanDisplay({ plan, profile, onOpenDonationModal }: Plan
       </div>
 
       {/* ✅ 打赏提示（在训练计划最后） */}
-      <DonationTip onOpenModal={onOpenDonationModal} />
+      <div id="donation-tip">
+        <DonationTip onOpenModal={onOpenDonationModal} />
+      </div>
     </div>
   );
 }

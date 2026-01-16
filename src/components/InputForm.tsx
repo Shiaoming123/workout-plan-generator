@@ -128,7 +128,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       )}
 
       {/* AI 模型选择 */}
-      <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+      <div id="ai-model-section" className="mb-6 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
         <label className="block font-semibold mb-3 text-purple-900">
           🤖 AI 模型选择 <span className="text-red-500">*</span>
         </label>
@@ -168,7 +168,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* ✅ 新增：自定义 API 配置区（可折叠）*/}
-      <div className="mb-6 border-2 border-blue-300 rounded-lg overflow-hidden">
+      <div id="api-config-section" className="mb-6 border-2 border-blue-300 rounded-lg overflow-hidden">
         <button
           type="button"
           onClick={() => setShowAPIConfig(!showAPIConfig)}
@@ -716,6 +716,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
       {/* 提交按钮 */}
       <button
+        id="generate-button"
         type="submit"
         className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
       >
