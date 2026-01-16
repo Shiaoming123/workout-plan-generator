@@ -421,7 +421,7 @@ function SimpleExportView({ plan, sessions, profile, showUserProfile, includeNut
     : goalGradients.fitness;
 
   return (
-    <div className="h-full flex flex-col bg-white" style={{ minHeight: '600px' }}>
+    <div className="flex flex-col bg-white" style={{ width: '600px', minHeight: '600px' }}>
       {/* ✅ 顶部标题区域 - 包含用户信息或仅计划标题 */}
       <div className={`bg-gradient-to-br ${gradientClass} px-6 py-4 text-white`}>
         <div className="flex items-center justify-between">
@@ -652,7 +652,7 @@ function DetailedExportView({ plan, sessions, profile, showUserProfile, includeN
     : goalGradients.fitness;
 
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-white" style={{ width: '600px' }}>
       {/* 顶部标题区域 */}
       <div className={`bg-gradient-to-br ${gradientClass} px-6 py-4 text-white`}>
         <div className="flex items-center justify-between">
