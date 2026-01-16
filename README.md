@@ -722,10 +722,38 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ## 🙏 致谢
 
+### 技术支持
 - [DeepSeek](https://www.deepseek.com/) - AI 大模型支持
 - [React](https://reactjs.org/) - 前端框架
 - [Tailwind CSS](https://tailwindcss.com/) - 样式框架
 - [Vite](https://vitejs.dev/) - 构建工具
+
+### ☕️ 请我喝奶茶
+
+如果这个项目对您有帮助，欢迎请我喝杯奶茶！您的支持是我持续优化的动力 🚀
+
+**💰 支付宝**
+```
+扫码即可支持，感谢您的鼓励！
+```
+
+**💚 微信支付**
+```
+您的每一份支持都是对我最大的肯定！
+```
+
+**💖 感谢方式**
+- 完全自愿，不强制 😊
+- 金额随意，心意最重要 💝
+- 支持后可以在 [Issues](https://github.com/Shiaoming123/workout-plan-generator/issues) 留言，我会优先处理
+
+**🌟 为什么支持？**
+- ✅ 鼓励开源项目的持续维护
+- ✅ 支持独立开发者
+- ✅ 促进功能迭代和优化
+- ✅ 享受更好的服务体验
+
+无论是否支持，都感谢您的使用！愿您早日达成健身目标 💪🎯
 
 ## 📧 联系方式
 

@@ -4,6 +4,7 @@ import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
+import DonationsModal from './components/DonationsModal';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
@@ -25,6 +26,9 @@ export default function App() {
 
   // 进度状态（用于按周生成）
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // 感谢弹窗状态
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
@@ -59,6 +63,7 @@ export default function App() {
 
       setPlan(newPlan);
       setProgress(null); // 完成后清空进度
+      setShowDonationModal(true); // ✅ 显示感谢弹窗
     } catch (error: any) {
       console.error('生成计划失败:', error);
       setError(error.message || '生成计划失败，请稍后重试');
@@ -208,6 +213,12 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      {/* ✅ 感谢弹窗 */}
+      <DonationsModal
+        isOpen={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+      />
     </div>
   );
 }
