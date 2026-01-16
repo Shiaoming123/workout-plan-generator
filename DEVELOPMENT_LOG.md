@@ -6,6 +6,88 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-16 23:55] - 匹配质量控制：只显示精确匹配的演示资源
+
+### Operation | 操作
+基于日志分析发现问题并实施严格的质量控制策略。
+
+**发现的问题：**
+通过分析用户提供的日志文件（exercise-demo-logs-2026-01-16.json），发现 AscendAPI 搜索质量极差：
+
+| 卡片名称 | API 返回结果 | 匹配度 |
+|---------|------------|--------|
+| Side Plank (Knees Bent) | Pull-up with Bent Knee between Chairs | ❌ 完全错误 |
+| Dead Bug | Romanian Deadlift | ❌ 完全错误 |
+| Glute Bridge | Hip Thrusts | ⚠️ 相关但不准确 |
+| Bird Dog | Downward Facing Dog | ❌ 完全错误 |
+| Cat-Cow Stretch | Seated Single Leg Hamstring Stretch | ❌ 完全错误 |
+
+**解决方案：**
+1. 实施精确匹配检查（不区分大小写）
+2. 低质量匹配时清空视频/图片 URL
+3. 保留文字描述信息作为 fallback
+4. 在控制台输出警告和提示
+
+### Files Modified | 修改的文件
+
+#### `src/lib/exerciseDemoService.ts` (lines 198-238)
+**添加匹配质量检查：**
+```typescript
+// 检查匹配质量
+const isExactMatch =
+  apiExercise.name.toLowerCase() === finalExerciseName.toLowerCase();
+
+if (!isExactMatch) {
+  console.warn(
+    `⚠️ 低质量匹配: "${finalExerciseName}" → "${apiExercise.name}"`
+  );
+  console.info(
+    `ℹ️ 将显示文字描述而非演示视频/图片，因为匹配质量较低`
+  );
+} else {
+  console.log(`✅ 精确匹配: "${finalExerciseName}"`);
+}
+
+// 构建演示数据
+const demo: ExerciseDemo = {
+  // ...
+  // 对于低质量匹配，清空图片和视频，只保留文字信息
+  imageUrl: isExactMatch ? (finalApiExercise.imageUrl || '') : '',
+  videoUrl: isExactMatch ? finalApiExercise.videoUrl : undefined,
+  // ...
+};
+```
+
+### Results | 结果
+- ✅ 不再显示错误/不相关的视频和图片
+- ✅ 对于低质量匹配，至少显示相关文字描述
+- ✅ 用户体验提升（看到占位符而非错误内容）
+- ✅ 开发者可以清楚地看到匹配问题（控制台警告）
+
+### Testing | 测试
+- [x] 本地开发服务器测试
+- [x] 生产构建成功
+- [x] TypeScript 编译通过
+- [ ] 用户验证（待测试）
+
+### Notes | 备注
+**根本原因：**
+AscendAPI 的搜索功能不可靠，无法通过运动名称准确匹配结果。
+
+**后续优化方向：**
+1. 手动验证常用运动，创建直接 API ID 映射表
+2. 考虑切换到更可靠的演示资源 API
+3. 为常见运动创建自定义演示内容（视频/图片/描述）
+4. 允许用户标记不匹配的映射，收集反馈
+
+**日志系统价值：**
+这次优化充分体现了日志系统的价值：
+- 发现了系统性问题（API 搜索质量差）
+- 提供了数据支持（所有匹配记录）
+- 指明了优化方向（哪些运动需要手动验证）
+
+---
+
 ## [2026-01-16 23:45] - 运动演示功能优化：固定位置 + 文字信息展示
 
 ### Operation | 操作
