@@ -391,7 +391,7 @@ export async function generatePlanByWeek(
  * 组装完整计划（从多个周计划）
  */
 function assemblePlan(profile: UserProfile, weeks: any[]): TrainingPlan {
-  const period = profile.period === 'month' ? 'month' : 'quarter';
+  const period = profile.period;
 
   // 创建计划摘要
   const summary = {
@@ -405,6 +405,23 @@ function assemblePlan(profile: UserProfile, weeks: any[]): TrainingPlan {
       ? `已根据身体限制调整训练内容`
       : undefined,
   };
+
+  // ✅ 自定义周数：直接返回周计划结构（不创建月份）
+  if (period === 'custom') {
+    return enrichPlanWithMetadata(
+      {
+        period: 'custom',
+        summary,
+        generatedAt: new Date().toISOString(),
+        weeks,
+      },
+      {
+        method: 'ai',
+        model: profile.aiModel,
+        generatedAt: new Date().toISOString(),
+      }
+    );
+  }
 
   // 根据周期类型组装
   if (period === 'month') {
