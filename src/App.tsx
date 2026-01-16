@@ -76,6 +76,20 @@ export default function App() {
     }
   };
 
+  // ✅ 新增：重新生成（返回表单填写界面）
+  const handleRegenerate = () => {
+    // 清空当前计划，返回到表单填写界面
+    setPlan(null);
+    setLastProfile(null);
+    setStreamContent('');
+    setStreamReasoning('');
+    setError(null);
+    setProgress(null);
+
+    // 滚动到页面顶部
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
@@ -171,7 +185,7 @@ export default function App() {
             {/* ✅ 用户信息汇总卡片（始终显示） */}
             {lastProfile && (
               <div className="max-w-7xl mx-auto print:hidden">
-                <UserProfileCard profile={lastProfile} />
+                <UserProfileCard profile={lastProfile} onRegenerate={handleRegenerate} />
               </div>
             )}
 

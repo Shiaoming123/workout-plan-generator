@@ -2,9 +2,10 @@ import { UserProfile } from '../types';
 
 interface UserProfileCardProps {
   profile: UserProfile;
+  onRegenerate?: () => void; // ✅ 新增：重新生成回调
 }
 
-export default function UserProfileCard({ profile }: UserProfileCardProps) {
+export default function UserProfileCard({ profile, onRegenerate }: UserProfileCardProps) {
   // 获取目标标签
   const goalLabels: Record<string, string> = {
     fat_loss: '减脂',
@@ -71,6 +72,19 @@ export default function UserProfileCard({ profile }: UserProfileCardProps) {
             <p className="text-sm text-gray-600">训练参数配置</p>
           </div>
         </div>
+
+        {/* ✅ 重新生成按钮 */}
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-200 hover:border-blue-300 rounded-lg transition-all font-medium shadow-sm hover:shadow"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>重新生成</span>
+          </button>
+        )}
       </div>
 
       {/* 基本信息网格 */}
