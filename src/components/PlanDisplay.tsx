@@ -1,4 +1,4 @@
-import { TrainingPlan } from '../types';
+import { TrainingPlan, UserProfile } from '../types';
 import SummaryCard from './cards/SummaryCard';
 import MetadataCard from './cards/MetadataCard';
 import WeekCard from './cards/WeekCard';
@@ -7,9 +7,10 @@ import ReasoningDisplay from './ReasoningDisplay';
 
 interface PlanDisplayProps {
   plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增：用户资料（可选）
 }
 
-export default function PlanDisplay({ plan }: PlanDisplayProps) {
+export default function PlanDisplay({ plan, profile }: PlanDisplayProps) {
   return (
     <div className="space-y-6">
       {/* 概览卡片 */}
@@ -24,13 +25,31 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
       )}
 
       {/* 导出按钮 */}
-      <ExportButtons plan={plan} />
+      <ExportButtons plan={plan} profile={profile} />
 
       {/* 训练计划内容 */}
       <div className="space-y-6">
-        {/* 周计划 */}
-        {plan.period === 'week' && plan.weeks && (
+        {/* 周计划 / 自定义周数计划 */}
+        {(plan.period === 'week' || plan.period === 'custom') && plan.weeks && (
           <div className="space-y-6">
+            <div className={`rounded-xl p-6 text-white shadow-card-lg ${
+              plan.period === 'custom'
+                ? 'bg-gradient-to-r from-teal-500 to-cyan-600'
+                : 'bg-gradient-to-r from-blue-500 to-purple-600'
+            }`}>
+              <h2 className="text-2xl font-bold mb-2">
+                {plan.period === 'custom'
+                  ? `${plan.summary.totalWeeks}周自定义训练计划`
+                  : '周训练计划'
+                }
+              </h2>
+              <p className={plan.period === 'custom' ? 'text-teal-100' : 'text-blue-100'}>
+                {plan.period === 'custom'
+                  ? `${plan.summary.totalWeeks}周渐进式训练，每周${plan.summary.daysPerWeek}天，每次${plan.summary.sessionMinutes}分钟`
+                  : '完整的单周训练安排'
+                }
+              </p>
+            </div>
             {plan.weeks.map((week, index) => (
               <WeekCard key={week.weekNumber} week={week} index={index} />
             ))}

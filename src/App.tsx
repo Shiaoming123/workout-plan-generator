@@ -3,6 +3,7 @@ import Header from './components/Header';
 import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
+import UserProfileCard from './components/UserProfileCard';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
@@ -16,8 +17,8 @@ export default function App() {
   const [streamContent, setStreamContent] = useState('');
   const [streamReasoning, setStreamReasoning] = useState('');
 
-  // 表单折叠状态（生成后默认折叠）
-  const [formCollapsed, setFormCollapsed] = useState(false);
+  // ✅ 新增：保存最近的用户资料（用于显示汇总信息）
+  const [lastProfile, setLastProfile] = useState<UserProfile | null>(null);
 
   // 中断控制
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -32,8 +33,10 @@ export default function App() {
     setPlan(null);
     setStreamContent('');
     setStreamReasoning('');
-    setFormCollapsed(false); // 生成时展开（显示流式输出）
     setProgress(null); // 重置进度
+
+    // ✅ 保存用户资料
+    setLastProfile(profile);
 
     // 创建新的中断控制器
     const controller = new AbortController();
@@ -55,7 +58,6 @@ export default function App() {
       );
 
       setPlan(newPlan);
-      setFormCollapsed(true); // 生成成功后自动折叠表单
       setProgress(null); // 完成后清空进度
     } catch (error: any) {
       console.error('生成计划失败:', error);
@@ -74,6 +76,20 @@ export default function App() {
     }
   };
 
+  // ✅ 新增：重新生成（返回表单填写界面）
+  const handleRegenerate = () => {
+    // 清空当前计划，返回到表单填写界面
+    setPlan(null);
+    setLastProfile(null);
+    setStreamContent('');
+    setStreamReasoning('');
+    setError(null);
+    setProgress(null);
+
+    // 滚动到页面顶部
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
@@ -81,14 +97,14 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {/* 根据是否有计划，切换布局 */}
         {!plan ? (
-          /* 未生成时：左右布局 */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left: Input Form */}
+          /* 未生成时：上下布局（与生成后风格统一） */
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* 表单区域 */}
             <div>
               <InputForm onGenerate={handleGenerate} />
             </div>
 
-            {/* Right: Empty State or Streaming */}
+            {/* 状态显示区域 */}
             <div>
               {/* 流式生成中 */}
               {isStreaming && (
@@ -154,69 +170,28 @@ export default function App() {
                     />
                   </svg>
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    还没有生成计划
+                    准备开始
                   </h3>
                   <p className="text-gray-500">
-                    填写左侧表单，点击「生成训练计划」按钮开始
+                    填写上方表单，点击「生成训练计划」按钮开始
                   </p>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          /* 生成后：表单折叠 + 训练计划全宽显示 */
+          /* 生成后：用户信息卡片 + 训练计划 */
           <div className="space-y-6">
-            {/* 可折叠的表单卡片 */}
-            <div className="bg-white rounded-xl shadow-card border border-gray-200 overflow-hidden print:hidden">
-              <button
-                onClick={() => setFormCollapsed(!formCollapsed)}
-                className="w-full px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition-colors flex items-center justify-between text-left"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center justify-center w-10 h-10 bg-blue-500 text-white rounded-lg">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">个人信息与目标</h3>
-                    <p className="text-sm text-gray-600">
-                      {formCollapsed ? '点击展开修改参数' : '点击收起'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 展开/收起图标 */}
-                <svg
-                  className={`w-6 h-6 text-gray-400 transition-transform duration-200 ${
-                    formCollapsed ? '' : 'rotate-180'
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {/* 表单内容（可折叠）*/}
-              {!formCollapsed && (
-                <div className="p-6 border-t border-gray-200">
-                  <div className="max-w-3xl mx-auto">
-                    <InputForm onGenerate={handleGenerate} />
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* ✅ 用户信息汇总卡片（始终显示） */}
+            {lastProfile && (
+              <div className="max-w-7xl mx-auto print:hidden">
+                <UserProfileCard profile={lastProfile} onRegenerate={handleRegenerate} />
+              </div>
+            )}
 
             {/* 训练计划全宽显示 */}
             <div className="max-w-7xl mx-auto">
-              <PlanDisplay plan={plan} />
+              <PlanDisplay plan={plan} profile={lastProfile || undefined} />
             </div>
           </div>
         )}
