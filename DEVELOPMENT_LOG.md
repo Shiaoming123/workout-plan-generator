@@ -2,7 +2,168 @@
 
 This file tracks all significant modifications to the workout-plan-generator codebase. Each entry documents what was changed, why, and the results.
 
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-01-17
+
+---
+
+## [2026-01-17 00:05] - 根本性优化：集成精确运动名称到 AI 提示词
+
+### Operation | 操作
+实施用户的创新建议：将验证过的精确运动名称直接提供给大模型，从源头上解决匹配问题。
+
+**用户建议的方案：**
+> "将获取到的 API 对应的描述名字显性地放在提示词里面告诉调用的大模型'这个动作应该是这个名字'，这样或许可以让其精确匹配到确定的对应动作的资源"
+
+### 核心策略
+
+**工作流程转变：**
+
+❌ **之前的问题流程：**
+```
+AI 生成 → "Glute Bridge"
+   ↓
+API 搜索 → 找到 "Hip Thrusts"（不匹配）
+   ↓
+用户看到 → 臀桥名称，但显示髋部挺举的视频 ❌
+```
+
+✅ **现在的解决方案：**
+```
+AI 提示词包含精确名称映射
+   ↓
+AI 生成 → "Glute Bridge"（与 API 精确对应）
+   ↓
+API 搜索 → 精确匹配 "Glute Bridge" ✅
+   ↓
+用户看到 → 正确的演示视频 ✅
+```
+
+### Files Modified | 修改的文件
+
+#### `src/data/verifiedExerciseMappings.ts` (新建)
+**验证过的运动名称映射表：**
+```typescript
+export const VERIFIED_EXERCISE_MAPPINGS: VerifiedExerciseMapping[] = [
+  {
+    ourId: 'upper_1',
+    ourName: 'Push-ups',
+    ourNameZh: '俯卧撑',
+    apiName: 'Push-up',  // API 中的精确名称
+    category: 'upper',
+  },
+  // ... 15 个已验证的运动
+];
+```
+
+**生成的 AI 提示词格式：**
+```
+═══════════════════════════════════════════════════════════
+📋 运动演示资源库 - 请使用以下精确的运动名称
+═══════════════════════════════════════════════════════════
+
+🔥 热身运动
+───────────────────────────────────────────────────
+• 开合跳　　　　　　→ 英文名: **Jumping Jacks**
+• 手臂环绕　　　　　→ 英文名: **Arm Circles**
+• 自重深蹲　　　　　→ 英文名: **Bodyweight Squats**
+
+💪 上肢训练
+───────────────────────────────────────────────────
+• 俯卧撑　　　　　　→ 英文名: **Push-up**
+• 上斜俯卧撑　　　　→ 英文名: **Incline Push-up**
+• 哑铃划船　　　　　→ 英文名: **Dumbbell Row**
+
+**使用规则：**
+1. 英文名必须与上述列表一致
+2. 确保用户能查看正确的演示视频
+═══════════════════════════════════════════════════════════
+```
+
+#### `src/lib/apiExerciseNameMapper.ts` (新建)
+**映射工具和扩展函数：**
+```typescript
+// 为所有运动创建映射（耗时操作）
+export async function createExerciseNameMappings(): Promise<ExerciseNameMapping[]>
+
+// 生成用于 AI 提示词的格式化列表
+export function generatePromptExerciseNames(mappings: ExerciseNameMapping[]): string
+
+// 导出/导入映射数据
+export function exportMappingsAsJSON(mappings: ExerciseNameMapping[]): string
+export function importMappingsFromJSON(json: string): ExerciseNameMapping[]
+```
+
+#### `src/lib/promptTemplates.ts` (lines 1-11, 47)
+**集成到 AI 系统提示词：**
+```typescript
+import { generateExerciseNamesForAI } from '../data/verifiedExerciseMappings';
+
+export function buildSystemPrompt(): string {
+  const exerciseNamesList = generateExerciseNamesForAI();
+
+  return `你是一位拥有15年经验的认证私人健身教练...
+  ## 训练编程原则
+  ...
+
+  ${exerciseNamesList}  // ← 插入精确运动名称列表
+
+  ## 输出格式要求
+  ...`;
+}
+```
+
+### Results | 结果
+
+**Token 消耗分析：**
+- Bundle 大小：447.33 kB → 449.65 kB (+2.32 kB, ~0.5%)
+- 估算 Token 增加：约 150-200 tokens
+- **结论：Token 消耗增加极少，完全可接受** ✅
+
+**验证过的运动（15 个）：**
+- 🔥 热身运动（3 个）：开合跳、手臂环绕、自重深蹲
+- 💪 上肢训练（3 个）：俯卧撑、上斜俯卧撑、哑铃划船
+- 🦵 下肢训练（3 个）：自重深蹲、高脚杯深蹲、弓步蹲
+- 🎯 核心训练（3 个）：平板支撑、侧平板支撑、登山跑
+- ⚡ HIIT训练（2 个）：波比跳、高抬腿
+- 🧘 拉伸运动（1 个）：婴儿式
+
+**预期效果：**
+- ✅ AI 直接使用精确名称
+- ✅ API 搜索精确匹配率接近 100%
+- ✅ 用户看到正确的演示视频
+- ✅ 无需复杂的后处理逻辑
+- ✅ 可持续扩展（逐步添加更多运动）
+
+### Testing | 测试
+- [x] 本地开发服务器测试
+- [x] 生产构建成功
+- [x] TypeScript 编译通过
+- [x] Bundle 大小监控（增加 2.32 kB）
+- [ ] 用户验证新生成的训练计划（待测试）
+- [ ] 验证匹配率提升（待测试）
+
+### Notes | 备注
+
+**方案优势：**
+1. **从源头解决问题** - 不再事后修补
+2. **Token 效率高** - 只增加 150-200 tokens，覆盖 15 个运动
+3. **可持续扩展** - 可以逐步验证和添加更多运动
+4. **维护简单** - 映射表清晰，易于更新
+
+**用户建议的价值：**
+这个建议非常聪明，体现了对问题的深刻理解：
+- 识别出根本原因（AI 不知道 API 中的精确名称）
+- 提出了简洁的解决方案（直接告诉 AI）
+- 考虑了实际约束（Token 消耗可接受）
+
+**后续扩展方向：**
+1. 逐步验证并添加更多常用运动（目标 50+）
+2. 创建自动化脚本批量验证映射
+3. 收集用户反馈，持续优化映射表
+4. 考虑为不同训练目标创建专属映射子集
+
+**相关 Commit：**
+- a2e7e38 - feat: 集成精确运动名称到 AI 提示词
 
 ---
 
