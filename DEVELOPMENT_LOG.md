@@ -347,6 +347,99 @@ onClick={() => {
 
 ---
 
+## [2026-01-16 18:30] - 添加重新生成按钮
+
+### Operation | 操作
+
+在用户信息汇总卡片右上角添加"重新生成"按钮，方便用户返回表单填写界面修改参数后重新生成计划。
+
+### Files Modified | 修改的文件
+
+#### 1. `src/components/UserProfileCard.tsx`
+**添加重新生成按钮：**
+- 添加 `onRegenerate` 回调函数参数
+- 在标题栏右上角添加重新生成按钮
+- 按钮设计：白色背景、蓝色文字、带图标和阴影
+- 图标：循环箭头（表示重新生成）
+
+**按钮代码：**
+```typescript
+{onRegenerate && (
+  <button
+    onClick={onRegenerate}
+    className="flex items-center space-x-2 px-4 py-2 bg-white
+      hover:bg-gray-50 text-blue-600 border-2 border-blue-200
+      hover:border-blue-300 rounded-lg transition-all font-medium
+      shadow-sm hover:shadow"
+  >
+    <svg className="w-5 h-5">
+      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+    <span>重新生成</span>
+  </button>
+)}
+```
+
+#### 2. `src/App.tsx`
+**添加 handleRegenerate 函数：**
+```typescript
+const handleRegenerate = () => {
+  // 清空当前计划，返回到表单填写界面
+  setPlan(null);
+  setLastProfile(null);
+  setStreamContent('');
+  setStreamReasoning('');
+  setError(null);
+  setProgress(null);
+
+  // 滚动到页面顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+```
+
+**传递给 UserProfileCard：**
+```typescript
+<UserProfileCard
+  profile={lastProfile}
+  onRegenerate={handleRegenerate}
+/>
+```
+
+### Results | 结果
+
+#### ✅ 新功能
+- [x] 用户信息卡片右上角显示"重新生成"按钮
+- [x] 点击后返回表单填写界面
+- [x] 自动平滑滚动到页面顶部
+- [x] 清空所有之前的状态和数据
+
+#### ✅ 用户体验改进
+- **便捷的操作**：不需要刷新页面，一键返回表单
+- **清晰的功能**：按钮位置明显，文字和图标都表明功能
+- **流畅的交互**：平滑滚动动画，视觉反馈清晰
+- **完整的状态重置**：清空所有临时数据
+
+### Testing | 测试
+- [x] 生产构建成功
+- [x] 包大小：553.99 kB (gzip: 175.66 kB)
+- [x] TypeScript 编译通过
+- [ ] 本地开发服务器测试（用户自测）
+- [ ] 重新生成功能测试（用户自测）
+
+### Notes | 备注
+- 按钮仅在生成后的用户信息卡片上显示
+- 表单填写界面不显示此按钮
+- 使用平滑滚动提升用户体验
+- 完全清空之前的状态，避免混淆
+
+### Known Issues | 已知问题
+- 无
+
+### Future Improvements | 未来改进
+- 无
+
+---
+
 ## [2026-01-16 16:30] - 修复自定义周期显示 + 重新设计导出功能
 
 ### Operation | 操作
