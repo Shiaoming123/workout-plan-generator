@@ -416,7 +416,7 @@ function SimpleExportView({ plan, sessions }: { plan: TrainingPlan; sessions: Wo
           <div className="flex flex-col items-center">
             <div className="bg-white p-1.5 rounded border border-gray-200">
               <QRCodeSVG
-                value={typeof window !== 'undefined' ? window.location.href : 'https://github.com/Shiaoming123/workout-plan-generator'}
+                value="https://workout-plan-generator-three.vercel.app"
                 size={56}
                 level="L"
                 includeMargin={false}
@@ -548,7 +548,7 @@ function DetailedExportView({ plan, sessions }: { plan: TrainingPlan; sessions: 
           <div className="flex flex-col items-center">
             <div className="bg-white p-1.5 rounded border border-gray-200">
               <QRCodeSVG
-                value={typeof window !== 'undefined' ? window.location.href : 'https://github.com/Shiaoming123/workout-plan-generator'}
+                value="https://workout-plan-generator-three.vercel.app"
                 size={56}
                 level="L"
                 includeMargin={false}
