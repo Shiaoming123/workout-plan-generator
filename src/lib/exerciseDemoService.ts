@@ -195,6 +195,21 @@ export async function loadExerciseDemo(
       apiExercise
     );
 
+    // 检查匹配质量
+    const isExactMatch =
+      apiExercise.name.toLowerCase() === finalExerciseName.toLowerCase();
+
+    if (!isExactMatch) {
+      console.warn(
+        `⚠️ 低质量匹配: "${finalExerciseName}" → "${apiExercise.name}"`
+      );
+      console.info(
+        `ℹ️ 将显示文字描述而非演示视频/图片，因为匹配质量较低`
+      );
+    } else {
+      console.log(`✅ 精确匹配: "${finalExerciseName}"`);
+    }
+
     // 5. 如果需要视频且当前有 ID，获取详细信息
     let finalApiExercise = apiExercise;
     if (loadVideo && apiExercise.exerciseId && !apiExercise.videoUrl) {
@@ -209,8 +224,9 @@ export async function loadExerciseDemo(
       exerciseId,
       exerciseName: exerciseNameToUse || '',
       exerciseNameZh: exerciseNameZhToUse || '',
-      imageUrl: finalApiExercise.imageUrl || '',
-      videoUrl: finalApiExercise.videoUrl,
+      // 对于低质量匹配，清空图片和视频，只保留文字信息
+      imageUrl: isExactMatch ? (finalApiExercise.imageUrl || '') : '',
+      videoUrl: isExactMatch ? finalApiExercise.videoUrl : undefined,
       apiExerciseId: finalApiExercise.exerciseId,
       bodyPart: finalApiExercise.bodyParts?.[0] || '',
       targetMuscles: finalApiExercise.targetMuscles,
