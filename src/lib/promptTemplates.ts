@@ -1,9 +1,13 @@
 import type { UserProfile } from '../types';
+import { generateExerciseNamesForAI } from '../data/verifiedExerciseMappings';
 
 /**
  * 构建系统 Prompt - 定义 AI 的角色和任务
  */
 export function buildSystemPrompt(): string {
+  // 生成精确运动名称列表
+  const exerciseNamesList = generateExerciseNamesForAI();
+
   return `你是一位拥有15年经验的认证私人健身教练、运动生理学专家和注册营养师。
 
 ## 专长领域
@@ -39,6 +43,8 @@ export function buildSystemPrompt(): string {
 3. **恢复周期**：包含定期的减量周（Deload Week）
 4. **动作多样性**：避免训练单调，定期轮换动作
 5. **实用性约束**：严格遵守时间和器械限制
+
+${exerciseNamesList}
 
 ## 输出格式要求（极其重要）
 1. **必须输出纯 JSON 格式**，不要任何前导或尾随的解释文字

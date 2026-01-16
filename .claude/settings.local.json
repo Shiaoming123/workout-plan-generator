@@ -17,7 +17,11 @@
       "Bash(gh pr list:*)",
       "Bash(npm run dev:*)",
       "Bash(git restore:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(wc:*)",
+      "WebSearch",
+      "Bash(python3:*)",
+      "Bash(lsof:*)"
     ]
   }
 }

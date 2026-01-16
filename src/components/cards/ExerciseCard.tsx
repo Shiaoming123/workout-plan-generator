@@ -2,6 +2,7 @@ import { WorkoutSet } from '../../types';
 import { getExerciseById } from '../../lib/planGenerator';
 import { motion } from 'framer-motion';
 import { useReducedMotion } from 'framer-motion';
+import ExerciseDemoPopover from '../ExerciseDemoPopover';
 
 interface ExerciseCardProps {
   set: WorkoutSet;
@@ -41,86 +42,92 @@ export default function ExerciseCard({ set }: ExerciseCardProps) {
       };
 
   return (
-    <motion.div
-      className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150"
-      {...hoverProps}
+    <ExerciseDemoPopover
+      exerciseId={set.exerciseId}
+      exerciseName={name}
+      exerciseNameZh={nameZh}
     >
-      {/* 动作名称 */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1">
-          <h5 className="font-medium text-gray-900 leading-tight">
-            {nameZh}
-          </h5>
-          <p className="text-xs text-gray-500 mt-0.5">{name}</p>
+      <motion.div
+        className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150"
+        {...hoverProps}
+      >
+        {/* 动作名称 */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <h5 className="font-medium text-gray-900 leading-tight">
+              {nameZh}
+            </h5>
+            <p className="text-xs text-gray-500 mt-0.5">{name}</p>
+          </div>
+
+          {/* RPE 指示器（如有）*/}
+          {set.rpe && (
+            <div
+              className="flex-shrink-0 ml-3 px-2 py-1 rounded-md text-xs font-semibold"
+              style={{
+                backgroundColor: getRPEColor(set.rpe),
+                color: '#fff',
+              }}
+            >
+              RPE {set.rpe}
+            </div>
+          )}
         </div>
 
-        {/* RPE 指示器（如有）*/}
-        {set.rpe && (
-          <div
-            className="flex-shrink-0 ml-3 px-2 py-1 rounded-md text-xs font-semibold"
-            style={{
-              backgroundColor: getRPEColor(set.rpe),
-              color: '#fff',
-            }}
-          >
-            RPE {set.rpe}
+        {/* 训练参数 */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700">
+          {/* 组数 */}
+          {set.sets && (
+            <span className="flex items-center space-x-1">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span className="font-medium">{set.sets}组</span>
+            </span>
+          )}
+
+          {/* 次数 */}
+          {set.reps && (
+            <span className="flex items-center space-x-1">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <span>{set.reps}次</span>
+            </span>
+          )}
+
+          {/* 时长 */}
+          {set.duration && (
+            <span className="flex items-center space-x-1">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{set.duration}秒</span>
+            </span>
+          )}
+
+          {/* 休息时间 */}
+          {set.restSec > 0 && (
+            <span className="flex items-center space-x-1 text-gray-500">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs">休息{set.restSec}秒</span>
+            </span>
+          )}
+        </div>
+
+        {/* 备注（如有）*/}
+        {set.notes && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-600 leading-relaxed flex items-start space-x-1">
+              <span className="text-blue-500 flex-shrink-0 mt-0.5">💡</span>
+              <span>{set.notes}</span>
+            </p>
           </div>
         )}
-      </div>
-
-      {/* 训练参数 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700">
-        {/* 组数 */}
-        {set.sets && (
-          <span className="flex items-center space-x-1">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            <span className="font-medium">{set.sets}组</span>
-          </span>
-        )}
-
-        {/* 次数 */}
-        {set.reps && (
-          <span className="flex items-center space-x-1">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <span>{set.reps}次</span>
-          </span>
-        )}
-
-        {/* 时长 */}
-        {set.duration && (
-          <span className="flex items-center space-x-1">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{set.duration}秒</span>
-          </span>
-        )}
-
-        {/* 休息时间 */}
-        {set.restSec > 0 && (
-          <span className="flex items-center space-x-1 text-gray-500">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-xs">休息{set.restSec}秒</span>
-          </span>
-        )}
-      </div>
-
-      {/* 备注（如有）*/}
-      {set.notes && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <p className="text-xs text-gray-600 leading-relaxed flex items-start space-x-1">
-            <span className="text-blue-500 flex-shrink-0 mt-0.5">💡</span>
-            <span>{set.notes}</span>
-          </p>
-        </div>
-      )}
-    </motion.div>
+      </motion.div>
+    </ExerciseDemoPopover>
   );
 }
 
