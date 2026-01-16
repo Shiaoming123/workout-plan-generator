@@ -66,7 +66,15 @@ export default function App() {
       setShowDonationModal(true); // ✅ 显示感谢弹窗
     } catch (error: any) {
       console.error('生成计划失败:', error);
-      setError(error.message || '生成计划失败，请稍后重试');
+
+      // ✅ 检查是否是用户主动中断
+      if (error.name === 'AbortError' || error.message === '用户取消了生成') {
+        setError(null); // 清除错误，不显示为错误
+        // 显示友好提示
+        setStreamContent('✅ 已取消生成\n\n您可以重新填写表单并生成新的计划。');
+      } else {
+        setError(error.message || '生成计划失败，请稍后重试');
+      }
     } finally {
       setLoading(false);
       setIsStreaming(false);
@@ -78,6 +86,9 @@ export default function App() {
     if (abortController) {
       console.log('用户请求中断生成');
       abortController.abort();
+
+      // 立即显示中断消息
+      setStreamContent(prev => prev + '\n\n⚠️ 正在取消生成...');
     }
   };
 

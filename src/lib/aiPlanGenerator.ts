@@ -125,6 +125,12 @@ export async function generateAIPlanStreaming(
     console.log('🎉 AI 计划生成成功（流式）！');
     return plan;
   } catch (error: any) {
+    // ✅ 检查是否是用户主动中断
+    if (error.name === 'AbortError' || error.message === '用户取消了生成') {
+      console.log('⚠️  用户主动中断生成');
+      throw error; // ✅ 重新抛出，不要降级到规则引擎
+    }
+
     console.error('❌ AI 生成失败:', error.message);
     console.warn('⚙️  自动降级到规则引擎');
 
@@ -228,6 +234,12 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
     console.log('🎉 AI 计划生成成功！');
     return plan;
   } catch (error: any) {
+    // ✅ 检查是否是用户主动中断
+    if (error.name === 'AbortError' || error.message === '用户取消了生成') {
+      console.log('⚠️  用户主动中断生成');
+      throw error; // ✅ 重新抛出，不要降级到规则引擎
+    }
+
     console.error('❌ AI 生成失败:', error.message);
     console.warn('⚙️  自动降级到规则引擎');
 
@@ -377,6 +389,12 @@ export async function generatePlanByWeek(
     console.log('🎉 并行生成完成！');
     return plan;
   } catch (error: any) {
+    // ✅ 检查是否是用户主动中断
+    if (error.name === 'AbortError' || error.message === '用户取消了生成') {
+      console.log('⚠️  用户主动中断生成');
+      throw error; // ✅ 重新抛出，不要降级到规则引擎
+    }
+
     console.error('❌ 并行生成失败:', error.message);
     console.warn('⚙️  降级到规则引擎');
     return generateRuleBasedPlan(profile, {
