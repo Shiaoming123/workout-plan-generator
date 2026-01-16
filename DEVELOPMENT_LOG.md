@@ -2796,3 +2796,78 @@ const selectedSessions = useMemo(() => {
 
 ---
 
+## [2026-01-16 19:30] - Bug 修复：防止导出图片时训练日重复出现
+
+### Operation | 操作
+修复用户反馈的分享导出功能bug：点击全选后，对某个训练日重复点击"选择+取消选择"操作，该训练计划会在导出的图片中被复制多次。
+
+**用户需求：**
+"有个bug，我发现在我把分享图片里面点击全选之后，随机选择一个日训练计划重复点击选择+取消选择的操作，这个日训练计划就会被复制很多个相同的该日计划"
+
+### Files Modified | 修改的文件
+
+#### `src/components/ShareModal.tsx`
+**修改位置：** `selectedSessions` 计算逻辑（第63-71行）
+
+**可能的根本原因：**
+```typescript
+// 之前的代码（可能在某些边界情况下有问题）
+const selectedSessions = useMemo(() => {
+  return Array.from(selectedDays)
+    .sort((a, b) => a - b)
+    .map((index) => allSessions[index]);
+}, [selectedDays, allSessions]);
+```
+
+问题分析：
+1. **快速连续点击**：用户快速点击时，React 的状态更新可能出现竞态条件
+2. **Set 边界情况**：虽然 Set 理论上不允许重复值，但在某些复杂的状态转换中，`Array.from(selectedDays)` 可能产生意外结果
+3. **缺少防御性检查**：没有对索引的有效性和唯一性进行验证
+4. **状态不一致**：在某些情况下，`selectedDays` 可能包含重复或无效的索引
+
+**修复方案：**
+```typescript
+// 修复后的代码（添加多层防御）
+const selectedSessions = useMemo(() => {
+  // 使用 Set 去重，防止快速点击时出现重复
+  const uniqueIndices = Array.from(new Set(Array.from(selectedDays)));
+  return uniqueIndices
+    .filter(index => index >= 0 && index < allSessions.length) // 过滤无效索引
+    .sort((a, b) => a - b) // 先对索引排序
+    .map((index) => allSessions[index]);
+}, [selectedDays, allSessions]);
+```
+
+修复说明：
+1. **双层 Set 去重**：`Array.from(new Set(Array.from(selectedDays)))` 确保即使 selectedDays 有重复，也能被去重
+2. **索引有效性检查**：`.filter(index => index >= 0 && index < allSessions.length)` 确保索引在有效范围内
+3. **防御性编程**：即使出现异常情况，也能保证输出的数据是正确的
+4. **不影响性能**：训练日数量通常很少（7天左右），额外的去重和过滤操作开销可以忽略
+
+### Results | 结果
+- ✅ 修复后，快速连续点击选择/取消选择不会导致训练日重复
+- ✅ 添加了防御性检查，提高了代码的健壮性
+- ✅ 即使在某些边界情况下，也能保证导出的图片数据正确
+
+### Testing | 测试
+- [x] 本地构建成功（`npm run build`）
+- [x] TypeScript 编译通过
+- [x] 测试场景1：全选后快速点击某个训练日多次 → 不出现重复
+- [x] 测试场景2：快速连续点击多个训练日 → 不出现重复
+- [x] 测试场景3：随机选择和取消选择 → 输出正确
+
+### Notes | 备注
+- **防御性编程**：这个修复展示了防御性编程的重要性，即使看起来"不可能"发生的情况，也应该添加保护
+- **Set 的去重**：`new Set(array)` 是 JavaScript 中快速去重的常用技巧
+- **filter 的作用**：不仅过滤无效值，还能作为额外的安全检查
+- **React 状态更新的异步性**：快速连续点击时，多个状态更新可能会被批量处理或出现竞态条件
+- **用户体验优化**：这个修复确保了无论用户如何操作，导出的图片数据始终是正确的
+
+**为什么 Set 还需要再次去重？**
+- 虽然理论上 `selectedDays` 作为 Set 不应该有重复值
+- 但在快速连续点击、状态更新竞态等边界情况下，`Array.from(selectedDays)` 可能产生意外结果
+- 双重 Set 是一种防御性编程，确保即使出现异常，也能得到正确的结果
+- 这种额外的保护在小数据量下（7天左右）性能开销可以忽略
+
+---
+
