@@ -8,19 +8,19 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden relative">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col relative">
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all hover:scale-110"
+          className="absolute top-4 right-4 z-10 p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all hover:scale-110"
         >
           <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        {/* 内容区域 */}
-        <div className="p-8">
+        {/* 可滚动内容区域 */}
+        <div className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
           {/* 成功提示 */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-4 animate-bounce">
@@ -55,51 +55,66 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
           </div>
 
           {/* 收款码 */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-6 mb-6">
             {/* 支付宝 */}
-            <div className="bg-blue-50 rounded-2xl p-4 border-2 border-blue-200">
-              <div className="text-center mb-3">
+            <div className="bg-blue-50 rounded-2xl p-5 border-2 border-blue-200">
+              <div className="text-center mb-4">
                 <div className="text-4xl mb-2">💰</div>
-                <h3 className="font-bold text-gray-800">支付宝</h3>
-                <p className="text-xs text-gray-600">扫一扫请喝奶茶 🥤</p>
+                <h3 className="font-bold text-gray-800 text-lg">支付宝</h3>
+                <p className="text-xs text-gray-600 mt-1">扫一扫请喝奶茶 🥤</p>
               </div>
-              <div className="bg-white rounded-xl p-2 shadow-inner">
+              <div className="bg-white rounded-xl p-3 shadow-inner flex items-center justify-center">
                 <img
                   src="/images/alipay-qr.jpg"
                   alt="支付宝收款码"
-                  className="w-full rounded-lg"
+                  className="max-w-full h-auto rounded-lg"
+                  style={{ maxHeight: '200px' }}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
-                    target.parentElement!.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    const parent = target.parentElement!;
+                    if (parent) {
+                      parent.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    }
                   }}
                 />
               </div>
             </div>
 
             {/* 微信 */}
-            <div className="bg-green-50 rounded-2xl p-4 border-2 border-green-200">
-              <div className="text-center mb-3">
+            <div className="bg-green-50 rounded-2xl p-5 border-2 border-green-200">
+              <div className="text-center mb-4">
                 <div className="text-4xl mb-2">💚</div>
-                <h3 className="font-bold text-gray-800">微信支付</h3>
-                <p className="text-xs text-gray-600">扫一扫请喝奶茶 🧋</p>
+                <h3 className="font-bold text-gray-800 text-lg">微信支付</h3>
+                <p className="text-xs text-gray-600 mt-1">扫一扫请喝奶茶 🧋</p>
               </div>
-              <div className="bg-white rounded-xl p-2 shadow-inner">
+              <div className="bg-white rounded-xl p-3 shadow-inner flex items-center justify-center">
                 <img
                   src="/images/wechat-qr.jpg"
                   alt="微信收款码"
-                  className="w-full rounded-lg"
+                  className="max-w-full h-auto rounded-lg"
+                  style={{ maxHeight: '200px' }}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
-                    target.parentElement!.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    const parent = target.parentElement!;
+                    if (parent) {
+                      parent.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    }
                   }}
                 />
               </div>
             </div>
           </div>
 
-          {/* 底部按钮 */}
+          {/* 额外提示 */}
+          <p className="text-xs text-gray-500 text-center mb-4">
+            💡 提示：您也可以随时在项目主页找到赞助入口
+          </p>
+        </div>
+
+        {/* 固定底部按钮区域 */}
+        <div className="px-8 pb-8 pt-2 border-t border-gray-100 bg-white">
           <div className="flex gap-3">
             <button
               onClick={onClose}
@@ -114,11 +129,6 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
               稍后再说 👋
             </button>
           </div>
-
-          {/* 额外提示 */}
-          <p className="text-xs text-gray-500 text-center mt-4">
-            💡 提示：您也可以随时在项目主页找到赞助入口
-          </p>
         </div>
       </div>
 
