@@ -174,6 +174,59 @@ link.download = `训练计划-${plan.summary.goalZh}-${modeLabel}-${selectedSess
 
 ---
 
+## [2026-01-16 17:30] - 修复二维码网址为 Vercel 部署地址
+
+### Operation | 操作
+
+修复导出图片中二维码的网址，确保扫描后能正确访问部署在 Vercel 上的应用。
+
+### Files Modified | 修改的文件
+
+#### `src/components/ShareModal.tsx`
+**修改二维码 URL：**
+```typescript
+// 之前：动态使用当前页面 URL
+<QRCodeSVG
+  value={typeof window !== 'undefined' ? window.location.href : 'https://github.com/Shiaoming123/workout-plan-generator'}
+  size={56}
+/>
+
+// 修复后：使用固定的 Vercel 部署地址
+<QRCodeSVG
+  value="https://workout-plan-generator-three.vercel.app"
+  size={56}
+/>
+```
+
+**修改位置：**
+- SimpleExportView 组件（简略版）
+- DetailedExportView 组件（详细版）
+
+### Results | 结果
+- ✅ 二维码扫描后直接跳转到 https://workout-plan-generator-three.vercel.app
+- ✅ 无论在本地开发还是生产环境，二维码都指向正确的公网地址
+- ✅ 用户分享的图片中二维码在任何环境下都能正常访问
+- ✅ 朋友扫描二维码可以直接访问并使用应用
+
+### Testing | 测试
+- [x] 生产构建成功
+- [x] 包大小：547.87 kB (gzip: 174.09 kB)
+- [x] TypeScript 编译通过
+- [ ] 二维码扫描测试（确认跳转到正确地址）
+
+### Notes | 备注
+- **为什么使用固定地址**：避免本地开发时生成 localhost 的二维码，导致分享后无法访问
+- **部署地址**：https://workout-plan-generator-three.vercel.app
+- **好处**：确保分享的图片中的二维码在任何环境下都指向可访问的公网地址
+
+### Known Issues | 已知问题
+- 无
+
+### Future Improvements | 未来改进
+- 无
+
+---
+
 ## [2026-01-16 16:30] - 修复自定义周期显示 + 重新设计导出功能
 
 ### Operation | 操作
