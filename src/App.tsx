@@ -97,14 +97,14 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {/* 根据是否有计划，切换布局 */}
         {!plan ? (
-          /* 未生成时：左右布局 */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left: Input Form */}
+          /* 未生成时：上下布局（与生成后风格统一） */
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* 表单区域 */}
             <div>
               <InputForm onGenerate={handleGenerate} />
             </div>
 
-            {/* Right: Empty State or Streaming */}
+            {/* 状态显示区域 */}
             <div>
               {/* 流式生成中 */}
               {isStreaming && (
@@ -170,10 +170,10 @@ export default function App() {
                     />
                   </svg>
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                    还没有生成计划
+                    准备开始
                   </h3>
                   <p className="text-gray-500">
-                    填写左侧表单，点击「生成训练计划」按钮开始
+                    填写上方表单，点击「生成训练计划」按钮开始
                   </p>
                 </div>
               )}
