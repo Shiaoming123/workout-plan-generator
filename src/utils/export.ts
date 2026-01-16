@@ -46,19 +46,24 @@ function formatPlanAsText(plan: TrainingPlan): string {
   }
   text += '\n';
 
-  if (plan.period === 'week' && plan.weeks) {
+  // 周计划 / 自定义周期
+  if ((plan.period === 'week' || plan.period === 'custom') && plan.weeks) {
     plan.weeks.forEach((week) => {
       text += formatWeek(week);
     });
   }
 
-  if (plan.period === 'month' && plan.weeks) {
-    plan.weeks.forEach((week) => {
-      text += `\n========== ${week.weekName} ==========\n`;
-      text += formatWeek(week);
+  // 月计划
+  if (plan.period === 'month' && plan.months) {
+    plan.months.forEach((month) => {
+      text += `\n========== ${month.monthName} ==========\n`;
+      month.weeks.forEach((week) => {
+        text += formatWeek(week);
+      });
     });
   }
 
+  // 季度计划
   if (plan.period === 'quarter' && plan.months) {
     plan.months.forEach((month) => {
       text += `\n\n########## ${month.monthName} ##########\n`;

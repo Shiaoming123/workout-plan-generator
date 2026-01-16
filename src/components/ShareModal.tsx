@@ -405,7 +405,7 @@ function SimpleExportView({ plan, sessions, profile, showUserProfile }: {
         <div className="space-y-3">
           {sessions.slice(0, 4).map((session, index) => (
             <div
-              key={session.dayNumber}
+              key={`${session.dayNumber}-${index}`}
               className={`border-2 rounded-lg p-3 ${
                 index < 2 ? 'border-blue-200 bg-blue-50' : 'border-purple-200 bg-purple-50'
               }`}
@@ -556,7 +556,7 @@ function DetailedExportView({ plan, sessions, profile, showUserProfile }: {
       <div className="px-4 py-3 space-y-4">
         {sessions.map((session, index) => (
           <div
-            key={session.dayNumber}
+            key={`${session.dayNumber}-${index}`}
             className={`border-2 rounded-lg overflow-hidden ${
               index % 2 === 0 ? 'border-blue-200' : 'border-purple-200'
             }`}
