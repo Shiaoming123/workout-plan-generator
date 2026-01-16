@@ -6,6 +6,113 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-16 23:45] - 运动演示功能优化：固定位置 + 文字信息展示
+
+### Operation | 操作
+优化运动演示弹窗的用户体验，解决定位问题并增强无资源时的文字信息展示。
+
+**主要改进：**
+- 弹窗固定在网页右下角（`right: 20px, bottom: 20px`）
+- 无视频/图片时显示详细的动作描述、步骤和提示
+- 扩展运动数据类型以包含更多信息字段
+
+### Files Modified | 修改的文件
+
+#### `src/lib/exerciseDemoService.ts` (lines 28-43, 84-98, 161-175)
+**扩展 ExerciseDemo 类型：**
+```typescript
+export interface ExerciseDemo {
+  // ... 现有字段
+  targetMuscles?: string[];      // 目标肌肉群
+  overview?: string;             // 动作概述
+  equipment?: string[];          // 所需器械
+  // ... 其他字段
+}
+```
+
+**更新 API 数据映射：**
+- 从 AscendAPI 获取 `targetMuscles`, `overview`, `equipments` 字段
+- 在缓存返回和 API 调用中填充这些字段
+
+#### `src/components/ExerciseDemoPopover.tsx` (全面重构)
+**位置优化：**
+- 移除动态位置计算逻辑（`calculatePosition`, `position` state）
+- 固定弹窗在右下角：`right: 20px, bottom: 20px`
+- 最大高度 `70vh`，超出滚动
+
+**内容展示增强：**
+```tsx
+{/* 无资源占位符 */}
+{!demo.videoUrl && !demo.imageUrl && (
+  <div className="bg-gradient-to-br from-gray-100 to-gray-200...">
+    <svg>...</svg>
+    <p>暂无演示视频</p>
+    <p>请参考下方文字说明</p>
+  </div>
+)}
+
+{/* 概述 */}
+{demo.overview && <p>{demo.overview}</p>}
+
+{/* 目标肌肉（带标签） */}
+{demo.targetMuscles?.map(muscle => (
+  <span className="bg-blue-100...">{muscle}</span>
+))}
+
+{/* 器械要求 */}
+{demo.equipment?.map(eq => (
+  <span className="bg-gray-100...">{eq}</span>
+))}
+
+{/* 动作步骤（有序列表） */}
+{demo.instructions?.map((step, i) => (
+  <li>{i + 1}. {step}</li>
+))}
+
+{/* 动作提示（无序列表） */}
+{demo.tips?.map(tip => <li>• {tip}</li>)}
+```
+
+**移除内容：**
+- `offset` prop（不再需要）
+- `calculatePosition()` 函数
+- `position` state
+- `triggerRef`（不再用于位置计算）
+
+### Results | 结果
+- ✅ 弹窗位置固定，不会遮挡内容或超出视口
+- ✅ 无视频/图片时显示丰富的文字信息
+- ✅ 所有可用的 API 数据都被展示
+- ✅ 代码简化（移除了位置计算逻辑）
+- ✅ 构建成功（443.73 kB → 443.73 kB，几乎无变化）
+
+### Testing | 测试
+- [x] 本地开发服务器测试 (`npm run dev`)
+- [x] 生产构建成功 (`npm run build`)
+- [x] TypeScript 编译通过
+- [ ] 生产预览验证 (`npm run preview`) - 待测试
+- [ ] 功能测试：
+  - [ ] 桌面端悬停显示
+  - [ ] 移动端点击显示
+  - [ ] 无资源时文字信息展示
+  - [ ] 有资源时视频/图片播放
+
+### Notes | 备注
+**改进动机：**
+- 用户反馈原位置计算存在问题（`getBoundingClientRect` 报错）
+- 很多运动缺少视频/图片资源，但 API 返回了丰富的文字描述
+
+**用户体验优化：**
+1. 固定位置避免了计算错误和遮挡问题
+2. 文字信息确保即使没有演示资源，用户也能获得详细指导
+3. 结构化展示（概述 → 目标肌肉 → 器械 → 步骤 → 提示）符合学习习惯
+
+**API 数据利用：**
+- AscendAPI 返回的 `overview`, `instructions`, `exerciseTips` 等字段现在都被利用
+- 目标肌肉和器械以标签形式展示，更直观
+
+---
+
 ## [2026-01-16 23:30] - 饮食建议与恢复建议功能完整实现
 
 ### Operation | 操作

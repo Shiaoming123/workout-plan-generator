@@ -33,8 +33,11 @@ export interface ExerciseDemo {
   videoUrl?: string;
   apiExerciseId: string;
   bodyPart: string;
+  targetMuscles?: string[];
+  overview?: string;
   instructions?: string[];
   tips?: string[];
+  equipment?: string[];
   loadStatus: DemoLoadStatus;
   error?: string;
 }
@@ -86,8 +89,11 @@ export async function loadExerciseDemo(
         videoUrl: cached.videoUrl,
         apiExerciseId: cached.apiExerciseId,
         bodyPart: cached.bodyPart,
+        targetMuscles: [],
+        overview: undefined,
         instructions: cached.instructions,
         tips: cached.tips,
+        equipment: [],
         loadStatus: 'loaded',
       };
     }
@@ -160,8 +166,11 @@ export async function loadExerciseDemo(
       videoUrl: finalApiExercise.videoUrl,
       apiExerciseId: finalApiExercise.exerciseId,
       bodyPart: finalApiExercise.bodyParts?.[0] || '',
+      targetMuscles: finalApiExercise.targetMuscles,
+      overview: finalApiExercise.overview,
       instructions: finalApiExercise.instructions,
       tips: finalApiExercise.exerciseTips,
+      equipment: finalApiExercise.equipments,
       loadStatus: 'loaded',
     };
 

@@ -30,12 +30,6 @@ interface ExerciseDemoPopoverProps {
 
   /** 悬浮延迟（毫秒），默认 300ms */
   delay?: number;
-
-  /** 悬浮框位置偏移 */
-  offset?: {
-    x: number;
-    y: number;
-  };
 }
 
 export default function ExerciseDemoPopover({
@@ -44,16 +38,15 @@ export default function ExerciseDemoPopover({
   exerciseNameZh,
   children,
   delay = 300,
-  offset = { x: 20, y: 20 },
 }: ExerciseDemoPopoverProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [demo, setDemo] = useState<ExerciseDemo | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   // 检测是否为移动端
   useEffect(() => {
@@ -76,20 +69,13 @@ export default function ExerciseDemoPopover({
   };
 
   // 鼠标进入处理（仅桌面端）
-  const handleMouseEnter = (e: React.MouseEvent) => {
+  const handleMouseEnter = () => {
     if (isMobile) return; // 移动端不处理悬停
 
     clearHoverTimeout();
 
     // 延迟显示
     timeoutRef.current = setTimeout(() => {
-      // 计算位置
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setPosition({
-        x: rect.right + offset.x,
-        y: rect.top,
-      });
-
       setIsVisible(true);
       setIsLoading(true);
 
@@ -127,12 +113,6 @@ export default function ExerciseDemoPopover({
       setIsLoading(false);
     } else {
       // 显示演示
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setPosition({
-        x: rect.right + offset.x,
-        y: rect.top,
-      });
-
       setIsVisible(true);
       setIsLoading(true);
 
@@ -167,6 +147,7 @@ export default function ExerciseDemoPopover({
 
   return (
     <div
+      ref={triggerRef}
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -180,9 +161,9 @@ export default function ExerciseDemoPopover({
           ref={popoverRef}
           className="fixed z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
           style={{
-            left: `${Math.min(position.x, window.innerWidth - 340)}px`,
-            top: `${position.y}px`,
-            maxHeight: '600px',
+            right: '20px',
+            bottom: '20px',
+            maxHeight: '70vh',
             overflowY: 'auto',
           }}
         >
@@ -205,7 +186,7 @@ export default function ExerciseDemoPopover({
             )}
 
             {!isLoading && demo && demo.loadStatus === 'loaded' && (
-              // 已加载 - 显示图片/视频
+              // 已加载 - 显示图片/视频/文字描述
               <div className="space-y-3">
                 {/* 优先显示视频 */}
                 {demo.videoUrl ? (
@@ -230,10 +211,72 @@ export default function ExerciseDemoPopover({
                       loading="lazy"
                     />
                   </div>
-                ) : null}
+                ) : (
+                  // 没有视频也没有图片，显示占位符
+                  <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg p-6 flex items-center justify-center">
+                    <div className="text-center">
+                      <svg
+                        className="w-16 h-16 mx-auto text-gray-400 mb-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <p className="text-gray-600 text-sm font-medium">暂无演示视频</p>
+                      <p className="text-gray-500 text-xs mt-1">请参考下方文字说明</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 概述 */}
+                {demo.overview && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-700 leading-relaxed">{demo.overview}</p>
+                  </div>
+                )}
+
+                {/* 目标肌肉 */}
+                {demo.targetMuscles && demo.targetMuscles.length > 0 && (
+                  <div className="text-xs text-gray-700">
+                    <p className="font-semibold mb-1">🎯 目标肌肉:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {demo.targetMuscles.map((muscle, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full"
+                        >
+                          {muscle}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 器械要求 */}
+                {demo.equipment && demo.equipment.length > 0 && (
+                  <div className="text-xs text-gray-700">
+                    <p className="font-semibold mb-1">🏋️ 所需器械:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {demo.equipment.map((eq, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full"
+                        >
+                          {eq}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 附加信息 */}
-                {demo.bodyPart && (
+                {demo.bodyPart && !demo.targetMuscles && (
                   <div className="text-xs text-gray-600">
                     <p>
                       <span className="font-semibold">目标部位:</span> {demo.bodyPart}
@@ -241,15 +284,29 @@ export default function ExerciseDemoPopover({
                   </div>
                 )}
 
+                {/* 动作指导 */}
+                {demo.instructions && demo.instructions.length > 0 && (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs font-semibold text-green-900 mb-2">📝 动作步骤</p>
+                    <ol className="text-xs text-green-800 space-y-1.5 list-decimal list-inside">
+                      {demo.instructions.slice(0, 5).map((instruction, idx) => (
+                        <li key={idx} className="leading-relaxed">
+                          {instruction}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
                 {/* 动作提示 */}
                 {demo.tips && demo.tips.length > 0 && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                  <div className="p-3 bg-blue-50 rounded-lg">
                     <p className="text-xs font-semibold text-blue-900 mb-2">💡 动作提示</p>
                     <ul className="text-xs text-blue-800 space-y-1">
-                      {demo.tips.slice(0, 2).map((tip, idx) => (
+                      {demo.tips.slice(0, 3).map((tip, idx) => (
                         <li key={idx} className="flex items-start">
-                          <span className="mr-1">•</span>
-                          <span>{tip}</span>
+                          <span className="mr-1 flex-shrink-0">•</span>
+                          <span className="leading-relaxed">{tip}</span>
                         </li>
                       ))}
                     </ul>
