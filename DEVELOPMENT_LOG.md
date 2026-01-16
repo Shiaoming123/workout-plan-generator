@@ -6,6 +6,174 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-16 17:15] - 添加简略版/详细版导出模式 + 修复二维码显示
+
+### Operation | 操作
+
+基于用户反馈，进一步优化导出功能，添加简略版和详细版两种导出模式，并修复二维码显示不完全的问题。
+
+**核心目标：**
+- 提供两种导出模式满足不同使用场景
+- 修复二维码被裁剪的显示问题
+- 实现动态高度，不再限制图片尺寸
+
+### Files Modified | 修改的文件
+
+#### `src/components/ShareModal.tsx`
+**完全重构导出视图：**
+
+**1. 添加导出模式选择**
+```typescript
+const [exportMode, setExportMode] = useState<'simple' | 'detailed'>('simple');
+
+// UI
+<div className="grid grid-cols-2 gap-2">
+  <label>简略版：显示概要信息</label>
+  <label>详细版：显示所有动作详情</label>
+</div>
+```
+
+**2. 简略版导出视图（SimpleExportView）**
+- 固定最小高度：600px
+- 最多显示4天的概要信息
+- 每天显示：热身、主训练、拉伸的前2个动作
+- 适合快速分享到社交媒体
+
+**3. 详细版导出视图（DetailedExportView）**
+- 动态高度，根据内容自适应
+- 显示所有选中天的完整训练计划
+- 每天显示4个训练阶段：
+  * 🔥 热身（所有动作）
+  * 💪 主训练（所有动作）
+  * ⚡ 辅助训练（所有动作）
+  * 🧘 放松拉伸（所有动作）
+- 每个动作显示：
+  * 动作名称（中文）
+  * 组数、次数
+  * 时长（秒）
+  * 休息时间（秒）
+  * RPE（如有）
+  * 备注（如有）
+
+**4. 训练阶段组件（PhaseSection）**
+```typescript
+function PhaseSection({ title, icon, color, sets }) {
+  return (
+    <div>
+      {/* 阶段标题 */}
+      <div className={`${colors.bg} ${colors.border} border`}>
+        {icon} {title} ({sets.length}个动作)
+      </div>
+      {/* 动作列表 */}
+      {sets.map((set, index) => (
+        <div key={index} className="p-2 rounded border">
+          <div>{index + 1}. {set.nameZh}</div>
+          <div>
+            {set.sets}组 {set.reps}次
+            {set.duration}秒
+            休息{set.restSec}秒
+            RPE{set.rpe}
+          </div>
+          {set.notes && <div>{set.notes}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**5. 修复二维码显示**
+```typescript
+// 之前：padding="1" size="60"
+// 修复后：padding="1.5" size="56"
+<div className="bg-white p-1.5 rounded border border-gray-200">
+  <QRCodeSVG
+    value={window.location.href}
+    size={56}
+    level="L"
+    includeMargin={false}
+  />
+</div>
+```
+
+**6. 动态高度实现**
+```typescript
+// 移除固定高度限制
+<div
+  ref={exportRef}
+  className="bg-white mx-auto overflow-hidden"
+  style={{
+    width: '600px',
+    minHeight: '600px', // 仅设置最小高度
+    // 不再设置 maxHeight
+  }}
+>
+  {exportMode === 'simple' ? (
+    <SimpleExportView /> {/* 固定高度 */}
+  ) : (
+    <DetailedExportView /> {/* 动态高度 */}
+  )}
+</div>
+```
+
+**7. 导出文件名优化**
+```typescript
+const modeLabel = exportMode === 'simple' ? '简略' : '详细';
+link.download = `训练计划-${plan.summary.goalZh}-${modeLabel}-${selectedSessions.length}天-${new Date().toISOString().slice(0, 10)}.png`;
+```
+
+### Results | 结果
+
+#### ✅ 新功能
+- [x] 简略版/详细版模式切换
+- [x] 简略版适合快速分享
+- [x] 详细版适合保存使用
+- [x] 二维码完整显示
+- [x] 动态高度支持
+
+#### ✅ 用户体验改进
+- **更灵活的选择**：根据使用场景选择合适的模式
+- **完整的信息**：详细版包含所有训练细节
+- **更好的显示**：二维码不再被裁剪
+- **合理的尺寸**：简略版固定尺寸，详细版动态调整
+
+#### ✅ 详细版特性
+- 显示所有训练阶段（热身、主训练、辅助、拉伸）
+- 每个动作显示完整参数（组数、次数、休息时间、RPE、备注）
+- 使用颜色区分不同训练日（蓝色/紫色交替）
+- 阶段标题使用颜色编码（橙色/蓝色/紫色/绿色）
+
+### Testing | 测试
+- [x] 生产构建成功 (`npm run build`)
+- [x] 包大小：547.96 kB (gzip: 174.11 kB)
+- [x] TypeScript 编译通过
+- [ ] 本地开发服务器测试（用户自测）
+- [ ] 简略版导出功能测试
+- [ ] 详细版导出功能测试
+- [ ] 二维码扫描测试
+
+### Notes | 备注
+- **简略版**：适合社交媒体分享，文件较小
+- **详细版**：适合保存打印，包含所有训练细节
+- **动态高度**：详细版高度 = 基础高度 + (每天训练内容高度 × 天数)
+- **颜色系统**：
+  * 热身：橙色系
+  * 主训练：蓝色系
+  * 辅助训练：紫色系
+  * 拉伸：绿色系
+- **二维码优化**：减小尺寸到56px，增加padding到1.5px，确保完整显示
+
+### Known Issues | 已知问题
+- 无
+
+### Future Improvements | 未来改进
+- 可以添加"自定义导出"模式，让用户选择要显示哪些训练阶段
+- 可以添加水印功能
+- 可以支持导出为 PDF 格式
+- 可以添加品牌标识自定义功能
+
+---
+
 ## [2026-01-16 16:30] - 修复自定义周期显示 + 重新设计导出功能
 
 ### Operation | 操作
