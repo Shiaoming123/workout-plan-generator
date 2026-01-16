@@ -16,6 +16,9 @@ import {
   getCachedDemo,
   saveCachedDemo,
 } from './exerciseDemoCache';
+import {
+  logDemoRequest,
+} from './exerciseDemoLogger';
 
 /**
  * 运动演示加载状态
@@ -125,18 +128,24 @@ export async function loadExerciseDemo(
     let apiExercise: AscendExercise | null = null;
     let exerciseNameToUse = providedExerciseName;
     let exerciseNameZhToUse = providedExerciseNameZh;
+    let searchTerms: string[] = [];
 
     // 3. 尝试通过映射查找
     const mapping = getExerciseMapping(exerciseId);
 
     if (mapping) {
       // 使用映射的搜索策略
+      if (mapping.matchStrategy === 'keyword' && mapping.searchKeywords) {
+        searchTerms = mapping.searchKeywords;
+      } else {
+        searchTerms = [mapping.ourExerciseName];
+      }
       apiExercise = await searchWithTimeout(mapping, timeout);
       exerciseNameToUse = mapping.ourExerciseName;
       exerciseNameZhToUse = mapping.ourExerciseNameZh;
     } else if (providedExerciseName) {
       // 4. 如果没有映射，直接用提供的运动名称搜索
-      console.log(`⚠️ 未找到 "${exerciseId}" 的映射，尝试直接用名称 "${providedExerciseName}" 搜索`);
+      searchTerms = [providedExerciseName];
       const exercises = await searchExerciseByName(providedExerciseName);
       if (exercises.length > 0) {
         apiExercise = exercises[0];
@@ -145,11 +154,27 @@ export async function loadExerciseDemo(
       exerciseNameZhToUse = providedExerciseNameZh || '';
     }
 
+    // 记录日志
+    const finalExerciseName = exerciseNameToUse || providedExerciseName || '';
+    const finalExerciseNameZh = exerciseNameZhToUse || providedExerciseNameZh || '';
+
     if (!apiExercise) {
+      // 记录失败的请求
+      logDemoRequest(
+        exerciseId,
+        finalExerciseName,
+        finalExerciseNameZh,
+        searchTerms,
+        null,
+        exerciseNameToUse
+          ? `未找到 "${exerciseNameToUse}" 的演示资源`
+          : `未找到运动 "${exerciseId}" 的映射配置`
+      );
+
       return {
         exerciseId,
-        exerciseName: exerciseNameToUse || '',
-        exerciseNameZh: exerciseNameZhToUse || '',
+        exerciseName: finalExerciseName,
+        exerciseNameZh: finalExerciseNameZh,
         imageUrl: '',
         videoUrl: '',
         apiExerciseId: '',
@@ -160,6 +185,15 @@ export async function loadExerciseDemo(
           : `未找到运动 "${exerciseId}" 的映射配置`,
       };
     }
+
+    // 记录成功的请求
+    logDemoRequest(
+      exerciseId,
+      finalExerciseName,
+      finalExerciseNameZh,
+      searchTerms,
+      apiExercise
+    );
 
     // 5. 如果需要视频且当前有 ID，获取详细信息
     let finalApiExercise = apiExercise;
@@ -311,4 +345,40 @@ export async function loadExerciseDemosBatch(
  */
 export function checkAPIConfiguration(): boolean {
   return isExerciseDBConfigured();
+}
+
+// 导出日志相关函数
+export {
+  getDemoLogs,
+  clearDemoLogs,
+  exportDemoLogs,
+  getDemoLogStats,
+  printDemoLogStats,
+  printMismatchedLogs,
+} from './exerciseDemoLogger';
+
+/**
+ * 在控制台显示日志帮助信息
+ */
+export function showDemoLogHelp(): void {
+  console.log(`
+📊 运动演示日志系统
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+可用命令：
+
+1. printDemoLogStats()
+   - 显示日志统计信息
+
+2. printMismatchedLogs()
+   - 显示名称不匹配的日志（默认最近10条）
+
+3. exportDemoLogs()
+   - 导出完整日志为 JSON 文件
+
+4. clearDemoLogs()
+   - 清空所有日志
+
+💡 提示：在浏览器控制台直接输入这些命令即可使用
+  `);
 }

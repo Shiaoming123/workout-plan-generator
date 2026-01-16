@@ -1,15 +1,16 @@
 /**
  * 运动演示悬浮框组件
  *
- * 当鼠标悬停（桌面端）或点击（移动端）在运动卡片上时，显示该运动的图片/视频演示
+ * 点击运动卡片显示该运动的图片/视频演示
  *
  * 特性：
- * - 桌面端：300ms 延迟悬停显示
- * - 移动端：点击触发显示
+ * - 点击卡片显示演示弹窗（桌面端和移动端统一）
+ * - 点击弹窗外部关闭
+ * - 弹窗常驻在右下角，直到用户点击外部区域
  * - 懒加载 + 缓存
  * - 加载状态指示
  * - 错误处理
- * - 响应式位置
+ * - 固定在网页右下角
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -28,9 +29,6 @@ interface ExerciseDemoPopoverProps {
 
   /** 触发元素（卡片本身） */
   children: React.ReactNode;
-
-  /** 悬浮延迟（毫秒），默认 300ms */
-  delay?: number;
 }
 
 export default function ExerciseDemoPopover({
@@ -38,77 +36,15 @@ export default function ExerciseDemoPopover({
   exerciseName,
   exerciseNameZh,
   children,
-  delay = 300,
 }: ExerciseDemoPopoverProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [demo, setDemo] = useState<ExerciseDemo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
 
-  // 检测是否为移动端
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // 清除延迟定时器
-  const clearHoverTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-
-  // 鼠标进入处理（仅桌面端）
-  const handleMouseEnter = () => {
-    if (isMobile) return; // 移动端不处理悬停
-
-    clearHoverTimeout();
-
-    // 延迟显示
-    timeoutRef.current = setTimeout(() => {
-      setIsVisible(true);
-      setIsLoading(true);
-
-      // 加载演示，传入运动名称
-      loadExerciseDemo(exerciseId, {
-        loadVideo: true,
-        exerciseName,
-        exerciseNameZh,
-      }).then((loadedDemo) => {
-        setDemo(loadedDemo);
-        setIsLoading(false);
-      });
-    }, delay);
-  };
-
-  // 鼠标离开处理（仅桌面端）
-  const handleMouseLeave = () => {
-    if (isMobile) return;
-
-    clearHoverTimeout();
-    setIsVisible(false);
-    setDemo(null);
-    setIsLoading(false);
-  };
-
-  // 点击处理（移动端）
+  // 点击卡片切换显示/隐藏
   const handleClick = (e: React.MouseEvent) => {
-    if (!isMobile) {
-      // 桌面端点击不处理，由悬停处理
-      return;
-    }
-
     e.stopPropagation();
 
     if (isVisible) {
@@ -132,34 +68,52 @@ export default function ExerciseDemoPopover({
     }
   };
 
-  // 清理定时器
+  // 点击外部关闭弹窗
   useEffect(() => {
-    return () => {
-      clearHoverTimeout();
-    };
-  }, []);
-
-  // 点击外部关闭（移动端）
-  useEffect(() => {
-    if (!isVisible || !isMobile) return;
+    if (!isVisible) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         setIsVisible(false);
         setDemo(null);
+        setIsLoading(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isVisible, isMobile]);
+    // 添加延迟，避免立即触发
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isVisible]);
+
+  // 首次加载时显示日志帮助（仅一次）
+  useEffect(() => {
+    const hasShownHelp = sessionStorage.getItem('demoLogHelpShown');
+    if (!hasShownHelp) {
+      console.log(`
+💡 运动演示日志系统已启用
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+所有演示请求都会被自动记录。
+在控制台输入以下命令查看日志：
+
+• printDemoLogStats() - 显示统计信息
+• printMismatchedLogs() - 显示不匹配的映射
+• exportDemoLogs() - 导出完整日志
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      `);
+      sessionStorage.setItem('demoLogHelpShown', 'true');
+    }
+  }, []);
 
   return (
     <div
-      ref={triggerRef}
-      className="relative inline-block"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className="relative inline-block cursor-pointer group"
       onClick={handleClick}
     >
       {children}
@@ -168,7 +122,7 @@ export default function ExerciseDemoPopover({
       {isVisible && createPortal(
         <div
           ref={popoverRef}
-          className="fixed z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          className="fixed z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200"
           style={{
             right: '20px',
             bottom: '20px',
@@ -177,11 +131,27 @@ export default function ExerciseDemoPopover({
           }}
         >
           {/* 标题栏 */}
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3">
-            <h3 className="text-white font-bold text-lg truncate">
-              {exerciseNameZh}
-            </h3>
-            <p className="text-blue-100 text-xs truncate">{exerciseName}</p>
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3 flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-bold text-lg truncate">
+                {exerciseNameZh}
+              </h3>
+              <p className="text-blue-100 text-xs truncate">{exerciseName}</p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsVisible(false);
+                setDemo(null);
+                setIsLoading(false);
+              }}
+              className="ml-3 flex-shrink-0 text-white hover:text-white/80 transition-colors p-1 hover:bg-white/10 rounded"
+              aria-label="关闭"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
           {/* 内容区 */}
@@ -355,7 +325,7 @@ export default function ExerciseDemoPopover({
           {/* 底部提示 */}
           <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              💡 演示来自 ExerciseDB API
+              💡 点击外部区域或关闭按钮退出
             </p>
           </div>
         </div>,
