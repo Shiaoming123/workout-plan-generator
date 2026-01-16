@@ -1,4 +1,6 @@
 import { TrainingPlan } from '../../types';
+import { motion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 interface SummaryCardProps {
   plan: TrainingPlan;
@@ -6,6 +8,7 @@ interface SummaryCardProps {
 
 export default function SummaryCard({ plan }: SummaryCardProps) {
   const { summary } = plan;
+  const prefersReducedMotion = useReducedMotion();
 
   // 根据目标类型选择渐变色
   const goalGradients: Record<string, string> = {
@@ -21,8 +24,20 @@ export default function SummaryCard({ plan }: SummaryCardProps) {
     ? goalGradients[summary.goal] || goalGradients.fitness
     : goalGradients.fitness;
 
+  // 动画配置（尊重系统设置）
+  const animationProps = prefersReducedMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.5 }
+      };
+
   return (
-    <div className="relative overflow-hidden rounded-2xl shadow-card-lg">
+    <motion.div
+      className="relative overflow-hidden rounded-2xl shadow-card-lg"
+      {...animationProps}
+    >
       {/* 渐变背景 */}
       <div className={`${gradientClass} px-6 py-8 text-white`}>
         <div className="relative z-10">
@@ -98,7 +113,7 @@ export default function SummaryCard({ plan }: SummaryCardProps) {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

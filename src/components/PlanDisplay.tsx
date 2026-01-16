@@ -31,8 +31,8 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
         {/* 周计划 */}
         {plan.period === 'week' && plan.weeks && (
           <div className="space-y-6">
-            {plan.weeks.map((week) => (
-              <WeekCard key={week.weekNumber} week={week} />
+            {plan.weeks.map((week, index) => (
+              <WeekCard key={week.weekNumber} week={week} index={index} />
             ))}
           </div>
         )}
@@ -46,8 +46,8 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
                 4周渐进式训练，包含基础期、增长期、高峰期和恢复期
               </p>
             </div>
-            {plan.months[0].weeks.map((week) => (
-              <WeekCard key={week.weekNumber} week={week} />
+            {plan.months[0].weeks.map((week, index) => (
+              <WeekCard key={week.weekNumber} week={week} index={index} />
             ))}
           </div>
         )}
@@ -62,7 +62,7 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
               </p>
             </div>
 
-            {plan.months.map((month) => (
+            {plan.months.map((month, monthIndex) => (
               <div key={month.monthNumber} className="space-y-6">
                 {/* 月度标题卡片 */}
                 <div className="bg-white rounded-xl border-l-4 border-purple-500 shadow-card p-6">
@@ -78,11 +78,12 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
 
                 {/* 月内周计划 - 优化间距 */}
                 <div className="space-y-4">
-                  {month.weeks.map((week) => (
+                  {month.weeks.map((week, weekIndex) => (
                     <WeekCard
                       key={week.weekNumber}
                       week={week}
                       showExpanded={false}
+                      index={monthIndex * 4 + weekIndex} // 全局索引，确保错峰
                     />
                   ))}
                 </div>
