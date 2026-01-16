@@ -60,9 +60,11 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
     setSelectedDays(newSelected);
   };
 
-  // 获取选中的训练日
+  // 获取选中的训练日（按 dayNumber 排序，确保顺序一致）
   const selectedSessions = useMemo(() => {
-    return Array.from(selectedDays).map((index) => allSessions[index]);
+    return Array.from(selectedDays)
+      .sort((a, b) => a - b) // 先对索引排序
+      .map((index) => allSessions[index]);
   }, [selectedDays, allSessions]);
 
   if (!isOpen) return null;
