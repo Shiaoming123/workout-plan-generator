@@ -253,7 +253,9 @@ export async function callDeepSeekStreaming(
     if (error.name === 'AbortError') {
       // 检查是否是用户主动中断
       if (abortSignal?.aborted) {
-        throw new Error('用户取消了生成');
+        const userAbortError = new Error('用户取消了生成');
+        userAbortError.name = 'AbortError'; // ✅ 保留 AbortError 名字
+        throw userAbortError;
       }
       // 区分是否已经接收到数据（超时中断）
       if (fullReasoning.length > 0 || fullContent.length > 0) {

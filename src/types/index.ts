@@ -33,6 +33,102 @@ export type PeriodType = 'week' | 'month' | 'quarter' | 'custom';
 
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
+// ✅ 新增：饮食相关类型
+export type MealFrequency = '2meals' | '3meals' | '4meals' | '5meals' | '6meals' | 'irregular';
+export type DietaryPreference = 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'other';
+export type FoodAllergy = 'dairy' | 'gluten' | 'nuts' | 'eggs' | 'soy' | 'shellfish' | 'other';
+export type CookingAbility = 'cannot_cook' | 'basic' | 'intermediate' | 'advanced';
+
+export interface DietProfile {
+  // 用餐习惯
+  mealFrequency: MealFrequency;
+  dietaryPreference?: DietaryPreference;
+  foodAllergies?: FoodAllergy[];
+  allergyNotes?: string;
+
+  // 当前饮食状况
+  currentDiet?: string; // 当前饮食习惯描述
+  waterIntake?: number; // 每日饮水量（杯/L）
+  supplementUsage?: string; // 当前使用的补剂
+
+  // 烹饪能力
+  cookingAbility: CookingAbility;
+  cookingTime?: number; // 每餐愿意花费的时间（分钟）
+
+  // 饮食目标
+  dietGoal?: string; // 饮食相关目标（增肌、减脂、维持等）
+
+  // 备注
+  dietNotes?: string;
+}
+
+export interface NutritionAdvice {
+  // 基础营养建议
+  dailyCalories?: number; // 每日建议热量
+  proteinGrams: number; // 每日蛋白质摄入
+  carbsGrams: number; // 每日碳水摄入
+  fatGrams: number; // 每日脂肪摄入
+
+  // 营养比例
+  proteinRatio: string; // 蛋白质比例（如"30%"）
+  carbsRatio: string;
+  fatRatio: string;
+
+  // 餐食安排
+  mealPlan: MealPlan[];
+
+  // 水分摄入
+  waterIntake: {
+    dailyLiters: number; // 每日建议升数
+  };
+
+  // 食谱推荐
+  recipes: Recipe[];
+}
+
+export interface MealPlan {
+  mealType: string; // 早餐、午餐、晚餐、加餐
+  timing: string; // 建议用餐时间（如"7:00-8:00"）
+  foods: string[]; // 推荐食物
+  calories?: number; // 预估热量
+  protein?: string; // 蛋白质来源
+}
+
+export interface Recipe {
+  name: string;
+  ingredients: string[];
+  instructions: string[];
+  prepTime: number; // 准备时间（分钟）
+  calories?: number;
+  protein?: string;
+  notes?: string;
+}
+
+export interface RecoveryAdvice {
+  // 睡眠建议
+  sleep: {
+    hours: number; // 建议睡眠时长
+    tips: string[]; // 睡眠质量建议
+  };
+
+  // 休息日建议
+  restDays: {
+    frequency: string; // 休息频率
+    activities: string[]; // 推荐的休息日活动
+  };
+
+  // 恢复技巧
+  recoveryTechniques: {
+    stretching: string[]; // 拉伸建议
+    foamRolling: string[]; // 筋膜放松建议
+    massage: string[]; // 按摩建议
+    other: string[]; // 其他恢复方法
+  };
+
+  // 注意事项
+  warningSigns: string[]; // 需要注意的信号（过度训练等）
+}
+
 export interface UserProfile {
   goal: Goal;
   gender: Gender;
@@ -60,6 +156,9 @@ export interface UserProfile {
   equipmentNotes?: string; // 器械补充说明
   preferencesNotes?: string; // 其他偏好说明
   customAPI?: CustomAPIConfig; // ✅ 新增：自定义 API 配置
+
+  // ✅ 新增：饮食情况（可选）
+  dietProfile?: DietProfile;
 }
 
 // ============ Exercise & Workout Types ============
@@ -147,6 +246,13 @@ export interface TrainingPlan {
   weeks?: WeekPlan[]; // for week plan
   months?: MonthPlan[]; // for month/quarter plan
   generatedAt: string;
+
+  // ✅ 新增：饮食建议
+  nutritionAdvice?: NutritionAdvice;
+
+  // ✅ 新增：恢复建议
+  recoveryAdvice?: RecoveryAdvice;
+
   // ============ AI Integration Metadata ============
   metadata: GenerationMetadata;
 }
