@@ -750,14 +750,16 @@ CMD ["nginx", "-g", "daemon off;"]
 如果这个项目对您有帮助，欢迎请我喝杯奶茶！您的支持是我持续优化的动力 🚀
 
 **💰 支付宝**
-```
-扫码即可支持，感谢您的鼓励！
-```
+<div align="center">
+  <img src="public/images/alipay-qr.jpg" alt="支付宝收款码" width="200" />
+  <p>扫码即可支持，感谢您的鼓励！</p>
+</div>
 
 **💚 微信支付**
-```
-您的每一份支持都是对我最大的肯定！
-```
+<div align="center">
+  <img src="public/images/wechat-qr.jpg" alt="微信收款码" width="200" />
+  <p>您的每一份支持都是对我最大的肯定！</p>
+</div>
 
 **💖 感谢方式**
 - 完全自愿，不强制 😊
