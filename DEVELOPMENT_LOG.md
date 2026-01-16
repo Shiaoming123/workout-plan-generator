@@ -3226,3 +3226,109 @@ setShowDonationModal(true); // ✅ 显示感谢弹窗
 - 可以添加更多支持方式（GitHub Sponsors、Patreon 等）
 
 ---
+## [2026-01-16 20:15] - 优化：感谢弹窗滚动和排版
+
+### Operation | 操作
+修复感谢弹窗的两个关键问题：无法滚动显示全部内容、排版对齐不佳。
+
+**用户反馈：**
+"你这个弹窗怎么不能上下滚动，二维码都没有显示全，而且排版好一点吧，都没有对齐"
+
+### Files Modified | 修改的文件
+
+#### `src/components/DonationsModal.tsx`
+**修改位置：** 整体布局结构（第11-133行）
+
+**问题1：弹窗无法滚动**
+
+**问题分析：**
+1. 使用 `overflow-hidden` 阻止了滚动
+2. 内容区域没有设置 `overflow-y-auto`
+3. 所有内容都在一个容器中，无法区分可滚动和固定部分
+4. 高度受限（max-h-[90vh]）但没有提供滚动机制
+
+**修复方案：**
+```typescript
+// 弹窗容器改为 flex flex-col 布局
+<div className="... flex flex-col relative">
+  
+  {/* 可滚动内容区域 */}
+  <div className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
+    {/* 成功提示、感谢文案、收款码 */}
+  </div>
+
+  {/* 固定底部按钮区域 */}
+  <div className="px-8 pb-8 pt-2 border-t border-gray-100 bg-white">
+    {/* 按钮 */}
+  </div>
+</div>
+```
+
+**修复说明：**
+1. **容器改为 flex 布局**：`flex flex-col` 实现垂直方向弹性布局
+2. **内容区域可滚动**：`flex-1 overflow-y-auto` 允许内容滚动
+3. **底部固定**：按钮区域不设置 `flex-1`，保持固定在底部
+4. **分隔线**：`border-t border-gray-100` 视觉分隔滚动区和按钮区
+
+**问题2：排版对齐不佳**
+
+**问题分析：**
+1. **间距太小**：`gap-4`（16px）太紧凑
+2. **内边距不足**：`p-4`（16px）内容太挤
+3. **标题间距**：`mb-3`（12px）不够明显
+4. **图片宽度**：`w-full` 可能导致图片过大
+5. **缺少居中对齐**：图片容器没有 flex 居中
+6. **字体大小**：标题没有设置字号，使用默认大小
+
+**修复方案：**
+```typescript
+// 优化后的排版
+<div className="grid grid-cols-2 gap-6 mb-6">
+  <div className="... p-5 ...">
+    <div className="text-center mb-4">
+      <h3 className="font-bold text-gray-800 text-lg">支付宝</h3>
+      <p className="text-xs text-gray-600 mt-1">扫一扫请喝奶茶 🥤</p>
+    </div>
+    <div className="... flex items-center justify-center">
+      <img
+        className="max-w-full h-auto rounded-lg"
+        style={{ maxHeight: '200px' }}
+      />
+    </div>
+  </div>
+</div>
+```
+
+**修复说明：**
+1. **卡片间距**：`gap-4` → `gap-6`（16px → 24px）
+2. **卡片内边距**：`p-4` → `p-5`（16px → 20px）
+3. **标题下边距**：`mb-3` → `mb-4`（12px → 16px）
+4. **标题字号**：添加 `text-lg`，更醒目
+5. **提示文字上边距**：添加 `mt-1`
+6. **图片容器**：添加 `flex items-center justify-center`
+7. **图片尺寸**：`max-w-full h-auto` + `maxHeight: '200px'`
+8. **图片内边距**：`p-2` → `p-3`（8px → 12px）
+
+### Results | 结果
+- ✅ 弹窗现在可以上下滚动，所有内容都能完整显示
+- ✅ 二维码完整显示，不会被截断
+- ✅ 排版对齐美观，视觉效果大幅提升
+- ✅ 底部按钮固定，操作更便捷
+- ✅ 图片大小合适，居中对齐
+
+### Testing | 测试
+- [x] 本地构建成功（`npm run build`）
+- [x] TypeScript 编译通过
+- [x] 弹窗可以上下滚动
+- [x] 二维码完整显示
+- [x] 两个收款码卡片对齐
+- [x] 标题和提示文字间距合理
+- [x] 底部按钮固定在可见区域
+
+### Notes | 备注
+- **Flexbox 布局**：使用 `flex flex-col` + `flex-1` 是实现固定头部/底部+可滚动中间区域的标准模式
+- **overflow-y-auto**：只在内容超出时显示滚动条，保持界面简洁
+- **max-height 限制**：图片使用 maxHeight 而不是固定高度，保持各种图片比例一致
+- **间距设计原则**：卡片内部使用 p-5（20px），卡片之间使用 gap-6（24px），形成视觉层次
+
+---
