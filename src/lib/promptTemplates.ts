@@ -4,16 +4,25 @@ import type { UserProfile } from '../types';
  * 构建系统 Prompt - 定义 AI 的角色和任务
  */
 export function buildSystemPrompt(): string {
-  return `你是一位拥有15年经验的认证私人健身教练和运动生理学专家。
+  return `你是一位拥有15年经验的认证私人健身教练、运动生理学专家和注册营养师。
 
 ## 专长领域
 - 减脂、增肌、体能提升、康复训练的运动处方设计
 - 生物力学分析和伤害预防策略
 - 渐进超负荷和周期化训练编程
 - 针对身体限制和禁忌症的动作适配与修正
+- 运动营养学：宏量营养素配比、餐食规划、补剂建议
+- 恢复策略：睡眠优化、休息日安排、恢复性训练
 
 ## 核心任务
 根据用户的个人资料、训练目标和身体条件，生成科学、安全、个性化的训练计划。
+
+**如果用户提供了饮食信息，则额外提供：**
+1. 个性化营养建议（热量、蛋白质、碳水、脂肪摄入量）
+2. 每日餐食安排（根据用餐频率）
+3. 简单实用的食谱推荐（考虑烹饪能力）
+4. 水分摄入建议
+5. 恢复建议（睡眠、休息日、恢复技巧）
 
 ## 安全第一原则（必须严格遵守）
 1. **身体限制优先**：始终优先考虑用户的身体限制和禁忌症
@@ -117,9 +126,70 @@ export function buildSystemPrompt(): string {
       "notes": "适应期"
     }
   ],
+  "nutritionAdvice": {
+    "dailyCalories": 2000,
+    "proteinGrams": 150,
+    "carbsGrams": 200,
+    "fatGrams": 67,
+    "proteinRatio": "30%",
+    "carbsRatio": "40%",
+    "fatRatio": "30%",
+    "mealPlan": [
+      {
+        "mealType": "早餐",
+        "timing": "7:00-8:00",
+        "foods": ["燕麦粥", "鸡蛋2个", "牛奶"],
+        "calories": 450,
+        "protein": "鸡蛋、牛奶"
+      },
+      {
+        "mealType": "午餐",
+        "timing": "12:00-13:00",
+        "foods": ["鸡胸肉", "糙米饭", "西兰花"],
+        "calories": 600,
+        "protein": "鸡胸肉"
+      }
+    ],
+    "waterIntake": {
+      "dailyLiters": 2.5
+    },
+    "recipes": [
+      {
+        "name": "香煎鸡胸肉",
+        "ingredients": ["鸡胸肉 200g", "橄榄油 10ml", "黑胡椒", "大蒜"],
+        "instructions": ["鸡胸肉切片", "热锅加橄榄油", "煎至两面金黄", "调味出锅"],
+        "prepTime": 15,
+        "calories": 250,
+        "protein": "高蛋白"
+      }
+    ]
+  },
+  "recoveryAdvice": {
+    "sleep": {
+      "hours": 8,
+      "tips": ["保持规律作息", "睡前避免蓝光", "保持卧室凉爽"]
+    },
+    "restDays": {
+      "frequency": "每周1-2天",
+      "activities": ["轻度散步", "瑜伽拉伸", "泡沫轴放松"]
+    },
+    "recoveryTechniques": {
+      "stretching": ["训练后静态拉伸15分钟", "重点拉伸训练肌群"],
+      "foamRolling": ["滚压大腿外侧", "滚压背部", "每部位1-2分钟"],
+      "massage": ["自我按摩放松紧张肌肉", "或考虑专业按摩"],
+      "other": ["冷热水交替浴", "充足睡眠"]
+    },
+    "warningSigns": ["持续关节疼痛", "睡眠质量下降", "持续疲劳感"]
+  },
   "generatedAt": "${new Date().toISOString()}"
 }
 \`\`\`
+
+**重要说明：**
+1. **nutritionAdvice 和 recoveryAdvice 是可选的**，仅在用户提供了饮食信息时才生成
+2. 如果用户未提供饮食信息，则不需要包含这两个字段
+3. 营养建议必须基于用户的：目标、体重、训练强度、饮食偏好、过敏情况、烹饪能力
+4. 食谱推荐必须考虑用户的烹饪水平和时间限制
 
 请严格按照此格式输出，不要添加任何额外的文字说明或 markdown 标记。`;
 }
@@ -220,6 +290,10 @@ ${profile.constraintNotes ? `- **详细说明**：${profile.constraintNotes}` : 
 }
 
 ${profile.preferencesNotes ? `## 🎨 其他偏好\n${profile.preferencesNotes}\n` : ''}
+
+${
+  profile.dietProfile ? buildDietProfileSection(profile.dietProfile) : ''
+}
 ## 📋 计划结构要求
 ${periodLabels[profile.period].details}
 
@@ -391,4 +465,95 @@ function getWeekPhaseDescription(weekNumber: number, totalWeeks: number): string
   } else {
     return '冲刺期 - 达到训练高峰';
   }
+}
+
+/**
+ * 构建饮食资料部分的 Prompt
+ */
+function buildDietProfileSection(dietProfile: NonNullable<UserProfile['dietProfile']>): string {
+  const mealFrequencyLabels: Record<string, string> = {
+    '2meals': '2餐/天',
+    '3meals': '3餐/天',
+    '4meals': '4餐/天',
+    '5meals': '5餐/天',
+    '6meals': '6餐/天',
+    'irregular': '不规律',
+  };
+
+  const dietaryPreferenceLabels: Record<string, string> = {
+    omnivore: '杂食',
+    vegetarian: '素食',
+    vegan: '纯素',
+    pescatarian: '鱼素',
+    keto: '生酮饮食',
+    paleo: '原始人饮食',
+    other: '其他',
+  };
+
+  const foodAllergyLabels: Record<string, string> = {
+    dairy: '乳制品',
+    gluten: '麸质',
+    nuts: '坚果',
+    eggs: '鸡蛋',
+    soy: '大豆',
+    shellfish: '海鲜',
+    other: '其他',
+  };
+
+  const cookingAbilityLabels: Record<string, string> = {
+    cannot_cook: '不会做饭',
+    basic: '基础（简单炒菜、煮蛋）',
+    intermediate: '进阶（多种烹饪方式）',
+    advanced: '精通（复杂菜谱）',
+  };
+
+  let section = `## 🍽️ 饮食信息（用户已提供）
+- **每日用餐频率**：${mealFrequencyLabels[dietProfile.mealFrequency]}`;
+
+  if (dietProfile.dietaryPreference) {
+    section += `\n- **饮食偏好**：${dietaryPreferenceLabels[dietProfile.dietaryPreference]}`;
+  }
+
+  if (dietProfile.foodAllergies && dietProfile.foodAllergies.length > 0) {
+    section += `\n- **食物过敏/不耐受**：${dietProfile.foodAllergies.map((a) => foodAllergyLabels[a]).join('、')}`;
+    if (dietProfile.allergyNotes) {
+      section += `\n  - **详细说明**：${dietProfile.allergyNotes}`;
+    }
+  }
+
+  if (dietProfile.currentDiet) {
+    section += `\n- **当前饮食习惯**：${dietProfile.currentDiet}`;
+  }
+
+  if (dietProfile.waterIntake) {
+    section += `\n- **当前每日饮水量**：约 ${dietProfile.waterIntake} 升`;
+  }
+
+  if (dietProfile.supplementUsage) {
+    section += `\n- **当前使用的补剂**：${dietProfile.supplementUsage}`;
+  }
+
+  section += `\n- **烹饪能力**：${cookingAbilityLabels[dietProfile.cookingAbility]}`;
+
+  if (dietProfile.cookingTime) {
+    section += `\n- **愿意花费的烹饪时间**：每餐约 ${dietProfile.cookingTime} 分钟`;
+  }
+
+  if (dietProfile.dietGoal) {
+    section += `\n- **饮食目标**：${dietProfile.dietGoal}`;
+  }
+
+  if (dietProfile.dietNotes) {
+    section += `\n- **饮食备注**：${dietProfile.dietNotes}`;
+  }
+
+  section += `\n\n**营养建议要求：**
+1. 根据用户的训练目标、体重和训练强度，计算合理的热量和宏量营养素摄入
+2. 考虑用户的饮食偏好和过敏情况，提供合适的食物选择
+3. 根据用户的用餐频率，安排每日餐食计划
+4. 根据用户的烹饪能力，推荐简单易做的食谱（不会做饭则推荐极简食谱或外卖建议）
+5. 提供实用的恢复建议，包括睡眠、休息日和恢复技巧
+6. 如果用户当前饮水量不足，提供逐步增加的建议\n`;
+
+  return section;
 }

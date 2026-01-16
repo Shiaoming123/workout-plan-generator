@@ -45,6 +45,9 @@ export default function InputForm({ onGenerate }: InputFormProps) {
   const [showAPIConfig, setShowAPIConfig] = useState(false);
   const [apiConfig, setApiConfig] = useState<CustomAPIConfig>(getDefaultAPIConfig());
 
+  // ✅ 新增：饮食信息状态
+  const [showDietConfig, setShowDietConfig] = useState(false);
+
   // ✅ 加载保存的 API 配置
   useEffect(() => {
     const saved = loadAPIConfig();
@@ -106,6 +109,45 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         ? currentArray.filter((item) => item !== value)
         : [...currentArray, value];
       return { ...prev, [field]: newArray };
+    });
+  };
+
+  // ✅ 新增：更新 dietProfile 字段
+  const updateDietField = <K extends keyof NonNullable<UserProfile['dietProfile']>>(
+    field: K,
+    value: NonNullable<UserProfile['dietProfile']>[K]
+  ) => {
+    setProfile((prev) => {
+      const currentDietProfile = prev.dietProfile;
+      const newDietProfile: any = {
+        ...currentDietProfile,
+        [field]: value,
+      };
+      return {
+        ...prev,
+        dietProfile: newDietProfile,
+      };
+    });
+  };
+
+  // ✅ 新增：切换 dietProfile 中的数组项
+  const toggleDietArrayItem = <K extends keyof NonNullable<UserProfile['dietProfile']>>(
+    field: K,
+    value: string
+  ) => {
+    setProfile((prev) => {
+      const currentArray = (prev.dietProfile?.[field] as string[]) || [];
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter((item) => item !== value)
+        : [...currentArray, value];
+      const newDietProfile: any = {
+        ...prev.dietProfile,
+        [field]: newArray,
+      };
+      return {
+        ...prev,
+        dietProfile: newDietProfile,
+      };
     });
   };
 
@@ -710,6 +752,291 @@ export default function InputForm({ onGenerate }: InputFormProps) {
             <p className="text-xs text-blue-700 mt-2">
               💡 建议：4-8周适合初学者，12-16周适合进阶训练
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* ✅ 新增：饮食信息收集模块（可折叠，可选）*/}
+      <div className="mb-6 border-2 border-green-300 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowDietConfig(!showDietConfig)}
+          className="w-full p-4 bg-green-50 text-left font-semibold text-green-900 flex justify-between items-center hover:bg-green-100 transition-colors"
+        >
+          <span>🍽️ 饮食信息收集（可选）- 获取营养建议与食谱推荐</span>
+          <span className="text-2xl">{showDietConfig ? '▼' : '▶'}</span>
+        </button>
+
+        {showDietConfig && (
+          <div className="p-4 space-y-5 bg-white">
+            <p className="text-sm text-gray-600 italic">
+              💡 填写此部分可获取个性化的营养建议、餐食安排和食谱推荐（完全可选）
+            </p>
+
+            {/* 用餐习惯 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">用餐习惯</h4>
+
+              {/* 每日用餐频率 */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  每日用餐频率 <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {[
+                    { value: '2meals', label: '2餐' },
+                    { value: '3meals', label: '3餐' },
+                    { value: '4meals', label: '4餐' },
+                    { value: '5meals', label: '5餐' },
+                    { value: '6meals', label: '6餐' },
+                    { value: 'irregular', label: '不规律' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateDietField('mealFrequency', opt.value as any)}
+                      className={`py-2 px-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                        profile.dietProfile?.mealFrequency === opt.value
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 饮食偏好 */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  饮食偏好（可选）
+                </label>
+                <select
+                  value={profile.dietProfile?.dietaryPreference || ''}
+                  onChange={(e) => updateDietField('dietaryPreference', e.target.value as any || undefined)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">无特殊偏好</option>
+                  <option value="omnivore">杂食</option>
+                  <option value="vegetarian">素食</option>
+                  <option value="vegan">纯素</option>
+                  <option value="pescatarian">鱼素</option>
+                  <option value="keto">生酮饮食</option>
+                  <option value="paleo">原始人饮食</option>
+                  <option value="other">其他</option>
+                </select>
+              </div>
+
+              {/* 食物过敏/不耐受 */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  食物过敏/不耐受（可选，多选）
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: 'dairy', label: '乳制品' },
+                    { value: 'gluten', label: '麸质' },
+                    { value: 'nuts', label: '坚果' },
+                    { value: 'eggs', label: '鸡蛋' },
+                    { value: 'soy', label: '大豆' },
+                    { value: 'shellfish', label: '海鲜' },
+                    { value: 'other', label: '其他' },
+                  ].map((opt) => {
+                    const isSelected = profile.dietProfile?.foodAllergies?.includes(opt.value as any);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggleDietArrayItem('foodAllergies', opt.value)}
+                        className={`py-2 px-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                          isSelected
+                            ? 'border-red-400 bg-red-50 text-red-700'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 过敏说明 */}
+              {(profile.dietProfile?.foodAllergies?.includes('other' as any) ||
+                profile.dietProfile?.foodAllergies?.length) && (
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    过敏说明（可选）
+                  </label>
+                  <textarea
+                    value={profile.dietProfile?.allergyNotes || ''}
+                    onChange={(e) => updateDietField('allergyNotes', e.target.value)}
+                    placeholder="请详细说明过敏情况或需要避免的食物..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                    rows={2}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 当前饮食状况 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">当前饮食状况</h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 当前饮食描述 */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    当前饮食习惯描述（可选）
+                  </label>
+                  <textarea
+                    value={profile.dietProfile?.currentDiet || ''}
+                    onChange={(e) => updateDietField('currentDiet', e.target.value)}
+                    placeholder="例如：经常外卖，偏油腻，喜欢吃甜食..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                    rows={2}
+                  />
+                </div>
+
+                {/* 每日饮水量 */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700">
+                    每日饮水量（可选）
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="0.5"
+                      value={profile.dietProfile?.waterIntake || ''}
+                      onChange={(e) => updateDietField('waterIntake', parseFloat(e.target.value) || undefined)}
+                      placeholder="例如：2"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    />
+                    <span className="text-gray-600 text-sm">升/天</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">建议成年男性 2.5-3L，女性 2-2.5L</p>
+                </div>
+              </div>
+
+              {/* 补剂使用 */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  当前使用的补剂（可选）
+                </label>
+                <textarea
+                  value={profile.dietProfile?.supplementUsage || ''}
+                  onChange={(e) => updateDietField('supplementUsage', e.target.value)}
+                  placeholder="例如：蛋白粉、肌酸、维生素等..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* 烹饪能力 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">烹饪能力</h4>
+
+              {/* 烹饪水平 */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  烹饪水平 <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: 'cannot_cook', label: '不会做饭' },
+                    { value: 'basic', label: '基础' },
+                    { value: 'intermediate', label: '进阶' },
+                    { value: 'advanced', label: '精通' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateDietField('cookingAbility', opt.value as any)}
+                      className={`py-2 px-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                        profile.dietProfile?.cookingAbility === opt.value
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  基础：简单炒菜、煮蛋；进阶：多种烹饪方式；精通：复杂菜谱
+                </p>
+              </div>
+
+              {/* 每餐烹饪时间 */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  愿意花费的烹饪时间（可选）
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    min="5"
+                    max="180"
+                    step="5"
+                    value={profile.dietProfile?.cookingTime || ''}
+                    onChange={(e) => updateDietField('cookingTime', parseInt(e.target.value) || undefined)}
+                    placeholder="例如：30"
+                    className="flex-1 max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  />
+                  <span className="text-gray-600 text-sm">分钟/餐</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 饮食目标 */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-800">饮食目标</h4>
+
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  饮食相关目标（可选）
+                </label>
+                <textarea
+                  value={profile.dietProfile?.dietGoal || ''}
+                  onChange={(e) => updateDietField('dietGoal', e.target.value)}
+                  placeholder="例如：增肌需要增加蛋白质摄入；减脂需要控制热量..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">
+                  其他备注（可选）
+                </label>
+                <textarea
+                  value={profile.dietProfile?.dietNotes || ''}
+                  onChange={(e) => updateDietField('dietNotes', e.target.value)}
+                  placeholder="任何其他与饮食相关的信息..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* 清除饮食信息按钮 */}
+            <div className="pt-3 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('确定要清除填写的饮食信息吗？')) {
+                    setProfile((prev) => ({ ...prev, dietProfile: undefined }));
+                  }
+                }}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                🗑️ 清除饮食信息
+              </button>
+            </div>
           </div>
         )}
       </div>

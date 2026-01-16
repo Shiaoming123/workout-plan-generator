@@ -5,6 +5,8 @@ import WeekCard from './cards/WeekCard';
 import ExportButtons from './ExportButtons';
 import ReasoningDisplay from './ReasoningDisplay';
 import DonationTip from './DonationTip';
+import NutritionCard from './NutritionCard';
+import RecoveryCard from './RecoveryCard';
 
 interface PlanDisplayProps {
   plan: TrainingPlan;
@@ -24,6 +26,20 @@ export default function PlanDisplay({ plan, profile, onOpenDonationModal }: Plan
       {/* 推理过程（Reasoner 模型专属）*/}
       {plan.metadata.reasoningProcess && (
         <ReasoningDisplay reasoning={plan.metadata.reasoningProcess} />
+      )}
+
+      {/* ✅ 新增：营养建议卡片（如果提供了饮食信息）*/}
+      {plan.nutritionAdvice && (
+        <div id="nutrition-advice">
+          <NutritionCard nutritionAdvice={plan.nutritionAdvice} />
+        </div>
+      )}
+
+      {/* ✅ 新增：恢复建议卡片（如果提供了饮食信息）*/}
+      {plan.recoveryAdvice && (
+        <div id="recovery-advice">
+          <RecoveryCard recoveryAdvice={plan.recoveryAdvice} />
+        </div>
       )}
 
       {/* 导出按钮 */}
