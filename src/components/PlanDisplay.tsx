@@ -4,13 +4,15 @@ import MetadataCard from './cards/MetadataCard';
 import WeekCard from './cards/WeekCard';
 import ExportButtons from './ExportButtons';
 import ReasoningDisplay from './ReasoningDisplay';
+import DonationTip from './DonationTip';
 
 interface PlanDisplayProps {
   plan: TrainingPlan;
   profile?: UserProfile; // ✅ 新增：用户资料（可选）
+  onOpenDonationModal?: () => void; // ✅ 新增：打开打赏弹窗回调
 }
 
-export default function PlanDisplay({ plan, profile }: PlanDisplayProps) {
+export default function PlanDisplay({ plan, profile, onOpenDonationModal }: PlanDisplayProps) {
   return (
     <div className="space-y-6">
       {/* 概览卡片 */}
@@ -111,6 +113,9 @@ export default function PlanDisplay({ plan, profile }: PlanDisplayProps) {
           </div>
         )}
       </div>
+
+      {/* ✅ 打赏提示（在训练计划最后） */}
+      <DonationTip onOpenModal={onOpenDonationModal} />
     </div>
   );
 }

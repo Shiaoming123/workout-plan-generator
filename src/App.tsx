@@ -196,7 +196,11 @@ export default function App() {
 
             {/* 训练计划全宽显示 */}
             <div className="max-w-7xl mx-auto">
-              <PlanDisplay plan={plan} profile={lastProfile || undefined} />
+              <PlanDisplay
+                plan={plan}
+                profile={lastProfile || undefined}
+                onOpenDonationModal={() => setShowDonationModal(true)}
+              />
             </div>
           </div>
         )}
