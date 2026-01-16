@@ -48,6 +48,11 @@ export async function generateAIPlanStreaming(
     return generatePlanByWeek(enhancedProfile, onStreamUpdate, onProgressUpdate, abortSignal);
   }
 
+  // ✅ 单周计划也显示进度（1/1）
+  if (onProgressUpdate) {
+    onProgressUpdate(0, 1);
+  }
+
   try {
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(profile);
@@ -123,6 +128,12 @@ export async function generateAIPlanStreaming(
     });
 
     console.log('🎉 AI 计划生成成功（流式）！');
+
+    // ✅ 更新进度为完成
+    if (onProgressUpdate) {
+      onProgressUpdate(1, 1);
+    }
+
     return plan;
   } catch (error: any) {
     // ✅ 检查是否是用户主动中断
