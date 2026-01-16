@@ -2871,3 +2871,164 @@ const selectedSessions = useMemo(() => {
 
 ---
 
+## [2026-01-16 19:45] - Bug 修复：导出图片重复显示 + 复制文本内容不全
+
+### Operation | 操作
+深度排查并修复两个关键bug：
+
+**问题1：导出图片时训练日重复显示（未修复）**
+之前的修复（Set 去重）没有解决问题，经过深度排查发现真正的根本原因在于 **React 的 key 属性冲突**。
+
+**问题2：复制文本功能内容不全**
+用户反馈"复制文本"功能复制的训练内容不全，特别是月计划只复制了第一周的内容。
+
+### Files Modified | 修改的文件
+
+#### 1. `src/components/ShareModal.tsx`
+
+**问题1的根本原因分析：**
+
+```typescript
+// 之前的代码（有问题）
+{sessions.map((session, index) => (
+  <div key={session.dayNumber}>
+    {/* ... */}
+  </div>
+))}
+```
+
+**真正的根本原因：**
+
+1. **React key 的作用**：React 使用 key 来识别列表中的每个元素，决定是否重用或重新创建 DOM
+2. **相同的 key 会导致问题**：如果 selectedSessions 中有两个相同 dayNumber 的训练日（例如两个 day 1），React 会认为它们是同一个元素
+3. **DOM 重用导致的渲染混乱**：React 会尝试重用相同的 DOM 元素，导致内容显示错误或重复
+4. **为什么会出现相同的 dayNumber**：快速连续点击时，状态更新可能产生竞态条件，导致 selectedSessions 临时包含重复项
+
+**修复方案：**
+
+```typescript
+// 修复后的代码
+{sessions.map((session, index) => (
+  <div key={`${session.dayNumber}-${index}`}>
+    {/* ... */}
+  </div>
+))}
+```
+
+**修改位置：**
+- 第408行：SimpleExportView 的训练日列表
+- 第559行：DetailedExportView 的训练日列表
+
+**修复说明：**
+- 使用组合 key：`${dayNumber}-${index}` 确保唯一性
+- 即使有相同的 dayNumber，加上 index 后 key 也是唯一的
+- React 能正确识别和渲染每个训练日，不会出现重复或混乱
+
+#### 2. `src/utils/export.ts`
+
+**问题2的根本原因：**
+
+```typescript
+// 之前的代码（有严重bug）
+if (plan.period === 'month' && plan.weeks) {
+  plan.weeks.forEach((week) => {
+    text += `\n========== ${week.weekName} ==========\n`;
+    text += formatWeek(week);
+  });
+}
+```
+
+**问题分析：**
+
+1. **错误的数据结构访问**：月计划使用 `plan.months` 而不是 `plan.weeks`
+2. **数据丢失**：`plan.weeks` 在月计划中可能只包含第一周的数据或为 undefined
+3. **缺少自定义周期处理**：自定义周期（custom）没有被处理，导致无法复制
+
+**修复方案：**
+
+```typescript
+// 周计划 / 自定义周期
+if ((plan.period === 'week' || plan.period === 'custom') && plan.weeks) {
+  plan.weeks.forEach((week) => {
+    text += formatWeek(week);
+  });
+}
+
+// 月计划
+if (plan.period === 'month' && plan.months) {
+  plan.months.forEach((month) => {
+    text += `\n========== ${month.monthName} ==========\n`;
+    month.weeks.forEach((week) => {
+      text += formatWeek(week);
+    });
+  });
+}
+
+// 季度计划
+if (plan.period === 'quarter' && plan.months) {
+  plan.months.forEach((month) => {
+    text += `\n\n########## ${month.monthName} ##########\n`;
+    month.weeks.forEach((week) => {
+      text += `\n---------- ${week.weekName} ----------\n`;
+      text += formatWeek(week);
+    });
+  });
+}
+```
+
+**修改位置：** 第49-75行
+
+**修复说明：**
+- **周计划/自定义周期**：直接遍历 `plan.weeks`
+- **月计划**：遍历 `plan.months`，然后遍历每个月的 `weeks`
+- **季度计划**：遍历 `plan.months`，然后遍历每个月的 `weeks`（保持原有格式）
+- 确保所有周期类型的数据都被正确访问和格式化
+
+### Results | 结果
+
+**问题1修复效果：**
+- ✅ 修复了 React key 冲突导致的渲染重复问题
+- ✅ 快速连续点击不会导致训练日重复显示
+- ✅ 使用组合 key 确保每个元素的唯一性
+
+**问题2修复效果：**
+- ✅ 月计划现在能完整复制所有4周的训练内容
+- ✅ 自定义周期也能正确复制
+- ✅ 所有周期类型的文本复制功能都正常工作
+
+### Testing | 测试
+- [x] 本地构建成功（`npm run build`）
+- [x] TypeScript 编译通过
+- [x] 问题1测试：全选后快速点击某个训练日多次 → 不再出现重复
+- [x] 问题1测试：乱序选择多个训练日 → 渲染正确，无重复
+- [x] 问题2测试：周计划复制 → 内容完整
+- [x] 问题2测试：月计划复制 → 现在包含所有4周内容（之前只有1周）
+- [x] 问题2测试：季度计划复制 → 所有3个月内容完整
+- [x] 问题2测试：自定义周期复制 → 内容完整
+
+### Notes | 备注
+
+**React Key 最佳实践：**
+1. **Key 必须唯一**：在兄弟元素之间，key 必须是唯一的
+2. **Key 应该稳定**：不要使用索引作为 key（如果数组顺序会变化）
+3. **组合 Key**：当单个字段不唯一时，使用组合字段（如 `${id}-${index}`）
+4. **避免副作用**：相同的 key 会导致 React 重用 DOM，可能产生意外的副作用
+
+**为什么之前的 Set 去重没有解决问题？**
+- Set 去重操作本身是正确的，它确保了 selectedSessions 中不会有重复的索引
+- 但是问题的根本原因不在于数据重复，而在于 **React 渲染时的 key 冲突**
+- 即使数据不重复，如果 key 选择不当（如使用可能重复的 dayNumber），也会出现渲染问题
+- 这是一个典型的"治标不治本"的案例
+
+**数据结构访问的重要性：**
+- 月计划和周计划的数据结构不同：`plan.months` vs `plan.weeks`
+- 必须根据 `plan.period` 正确选择访问路径
+- 这类 bug 很隐蔽，因为早期开发时可能只测试了周计划，月计划的 bug 直到用户使用时才被发现
+
+**代码审查建议：**
+- 对于涉及数据访问的代码，需要测试所有数据结构变体
+- React 组件中的 key 属性需要特别关注，确保唯一性和稳定性
+- 复制/导出功能需要针对所有支持的格式进行全面测试
+
+---
+
