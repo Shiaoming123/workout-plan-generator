@@ -2194,3 +2194,542 @@ const handleGenerate = async (profile: UserProfile) => {
 
 ---
 
+## [2026-01-16 18:00] - Bug 修复：自定义训练时长不生效
+
+### Operation | 操作
+修复用户反馈的自定义训练时长功能bug。用户在自定义模式下输入的时长（如2分钟）没有被正确应用，输出的计划仍使用默认60分钟。
+
+**根本原因：**
+- 自定义模式下，`customSessionMinutes` 被更新但 `sessionMinutes` 未同步
+- 提交表单时使用的是 `sessionMinutes` 而非 `customSessionMinutes`
+- 预设按钮和取消按钮没有清除自定义状态，导致状态不一致
+
+### Files Modified | 修改的文件
+
+#### `src/components/InputForm.tsx`
+**修改位置：** `handleSubmit` 函数（第180-210行）
+
+**修复方案：**
+1. **提交时同步值**：如果处于自定义模式，将 `customSessionMinutes` 同步到 `sessionMinutes`
+```typescript
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  // ✅ 如果在自定义模式下，确保使用自定义时长
+  let finalProfile = { ...profile };
+  if (customTimeMode && profile.customSessionMinutes) {
+    finalProfile = { ...finalProfile, sessionMinutes: profile.customSessionMinutes };
+  }
+
+  const validationErrors = validateProfile(finalProfile);
+  if (validationErrors.length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+  setErrors([]);
+  onGenerate(finalProfile);
+};
+```
+
+2. **预设按钮清除自定义状态**：
+```typescript
+onClick={() => {
+  updateField('sessionMinutes', n);
+  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
+}}
+```
+
+3. **取消按钮清除自定义状态**：
+```typescript
+onClick={() => {
+  setCustomTimeMode(false);
+  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
+}}
+```
+
+### Results | 结果
+- ✅ 自定义训练时长现在正确生效
+- ✅ 预设按钮和自定义按钮切换时状态一致
+- ✅ 用户输入的时长准确反映在生成的训练计划中
+
+### Testing | 测试
+- [x] 本地开发服务器测试通过（`npm run dev`）
+- [x] 自定义模式：输入20分钟，输出正确显示20分钟
+- [x] 预设按钮：点击后清除自定义状态
+- [x] 取消按钮：点击后清除自定义状态和时长值
+
+### Notes | 备注
+- 这是表单状态管理的关键bug修复
+- 确保"单一数据源"原则：同一时间只存在一个有效的时长值
+- 提交时做最终同步，确保逻辑路径只有一个
+
+---
+
+## [2026-01-16 18:15] - Bug 修复：二维码链接改为生产环境 URL
+
+### Operation | 操作
+修复导出图片中二维码链接错误的问题。之前使用 `window.location.href`，导致在本地开发时生成的二维码指向 localhost，部署后也可能指向错误的URL。
+
+**问题：**
+用户反馈二维码应该链接到公网可访问的 Vercel 部署地址：https://workout-plan-generator-three.vercel.app
+
+### Files Modified | 修改的文件
+
+#### `src/components/ShareModal.tsx`
+**修改位置：** QRCodeSVG 组件的 value 属性（第80-120行区域）
+
+**修复方案：**
+```typescript
+// 之前：动态获取当前页面URL
+<QRCodeSVG
+  value={window.location.href}
+  size={56}
+  level="L"
+  includeMargin={false}
+/>
+
+// 修复后：使用固定的生产环境URL
+<QRCodeSVG
+  value="https://workout-plan-generator-three.vercel.app"
+  size={56}
+  level="L"
+  includeMargin={false}
+/>
+```
+
+### Results | 结果
+- ✅ 二维码现在始终指向生产环境 URL
+- ✅ 无论在本地还是生产环境，生成的二维码链接都正确
+- ✅ 扫码后可访问公网部署的应用
+
+### Testing | 测试
+- [x] 本地开发服务器测试（`npm run dev`）
+- [x] 生成的二维码扫描后跳转到 Vercel 部署地址
+- [x] 简略版和详细版导出模式的二维码都正确
+
+### Notes | 备注
+- 这是内容分享功能的关键修复
+- 未来可以考虑：让用户自定义二维码URL（如自定义域名）
+- 硬编码生产URL适合当前的单一部署场景
+
+---
+
+## [2026-01-16 18:30] - 新功能：用户信息汇总卡片 + 导出时显示用户信息
+
+### Operation | 操作
+实现用户反馈的两项需求：
+1. 生成计划后，用户信息不再被隐藏，而是以汇总卡片形式显示
+2. 导出图片时，提供"显示个人信息"选项，让用户决定是否在图片中包含用户基本信息
+
+**设计决策：**
+- 创建独立的 `UserProfileCard` 组件，美观地展示用户信息
+- 导出模态框中添加复选框，控制是否在导出图片中显示用户信息
+- 保持用户体验的连贯性：生成前后都能看到用户信息
+
+### Files Modified | 修改的文件
+
+#### 1. `src/components/UserProfileCard.tsx` （新文件）
+**功能：** 展示用户个人信息和训练参数的汇总卡片
+
+**核心结构：**
+```typescript
+interface UserProfileCardProps {
+  profile: UserProfile;
+  onRegenerate?: () => void; // 为后续功能预留
+}
+
+export default function UserProfileCard({ profile, onRegenerate }: UserProfileCardProps) {
+  // 映射标签
+  const goalLabels: Record<string, string> = { /*...*/ };
+  const experienceLabels: Record<string, string> = { /*...*/ };
+  // ... 其他标签映射
+
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 shadow-card p-6">
+      {/* 标题栏：图标 + 标题 + 重新生成按钮 */}
+      {/* 基本信息网格：性别、年龄、身高、体重、目标、经验、周期、频率、时长、地点、器械、AI模型 */}
+      {/* 约束条件：显示身体限制和备注 */}
+      {/* 备注信息：目标、经验、器械、偏好备注 */}
+    </div>
+  );
+}
+```
+
+**展示内容：**
+- **基本信息**：👤 性别、🎂 年龄、📏 身高、⚖️ 体重
+- **训练目标**：🎯 目标（减脂/增肌/体能等）、⭐ 经验（新手/进阶/高级）
+- **训练配置**：📅 周期、🔄 频率、⏱️ 时长
+- **训练环境**：🏠 地点、🏋️ 器械
+- **AI 配置**：🤖 模型（DeepSeek Chat/Reasoner）
+- **约束条件**：身体限制（膝盖/背部/肩膀问题等）
+- **备注信息**：目标、经验、器械、偏好备注
+
+**设计亮点：**
+- 渐变背景（蓝色到紫色）
+- 图标 + 标签 + 数值的网格布局
+- 响应式：2列 → 4列 → 6列
+- 彩色标签区分不同类型的信息（蓝色/紫色/靛蓝）
+- 约束条件用黄色警告框突出显示
+
+#### 2. `src/App.tsx`
+**修改位置：** 状态管理和布局渲染（第20-210行）
+
+**修改内容：**
+1. **添加 lastProfile 状态**：
+```typescript
+const [lastProfile, setLastProfile] = useState<UserProfile | null>(null);
+```
+
+2. **保存用户资料**：
+```typescript
+const handleGenerate = async (profile: UserProfile) => {
+  // ...
+  setLastProfile(profile); // ✅ 保存用户资料
+  // ...
+};
+```
+
+3. **生成后显示用户信息卡片**：
+```typescript
+{plan ? (
+  <div className="space-y-6">
+    {/* ✅ 用户信息汇总卡片（始终显示） */}
+    {lastProfile && (
+      <div className="max-w-7xl mx-auto print:hidden">
+        <UserProfileCard profile={lastProfile} />
+      </div>
+    )}
+
+    {/* 训练计划全宽显示 */}
+    <div className="max-w-7xl mx-auto">
+      <PlanDisplay plan={plan} profile={lastProfile || undefined} />
+    </div>
+  </div>
+) : (
+  // ... 表单区域
+)}
+```
+
+#### 3. `src/components/ShareModal.tsx`
+**修改位置：** 添加用户信息显示选项（第10-30行，第150-200行）
+
+**修改内容：**
+1. **添加 profile 参数和 showUserProfile 状态**：
+```typescript
+interface ShareModalProps {
+  plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModalProps) {
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  // ...
+}
+```
+
+2. **添加"显示个人信息"复选框**：
+```typescript
+<label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+  <input
+    type="checkbox"
+    checked={showUserProfile}
+    onChange={(e) => setShowUserProfile(e.target.checked)}
+    className="w-4 h-4 text-blue-600 rounded"
+  />
+  <div className="ml-3">
+    <div className="font-medium text-sm">显示个人信息</div>
+    <div className="text-xs text-gray-500">在图片顶部显示年龄、体重、目标等基本信息</div>
+  </div>
+</label>
+```
+
+3. **在导出视图中显示用户信息**：
+```typescript
+{/* 简略版导出视图 */}
+{showUserProfile && profile && (
+  <div className="mt-3 pt-3 border-t border-white border-opacity-20">
+    <div className="grid grid-cols-4 gap-2 text-xs">
+      <div className="flex items-center space-x-1">
+        <span>👤</span>
+        <span>{profile.gender === 'male' ? '男' : '女'}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <span>🎂</span>
+        <span>{profile.age}岁</span>
+      </div>
+      {/* ... 更多信息 */}
+    </div>
+  </div>
+)}
+```
+
+#### 4. `src/components/ExportButtons.tsx`
+**修改位置：** 组件props和ShareModal调用（第6-15行，第108-115行）
+
+**修改内容：**
+```typescript
+interface ExportButtonsProps {
+  plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增：用户资料（可选）
+}
+
+export default function ExportButtons({ plan, profile }: ExportButtonsProps) {
+  // ...
+  {profile && (
+    <ShareModal
+      plan={plan}
+      profile={profile}
+      isOpen={showShareModal}
+      onClose={() => setShowShareModal(false)}
+    />
+  )}
+}
+```
+
+#### 5. `src/components/PlanDisplay.tsx`
+**修改位置：** 组件props和ExportButtons调用（第8-11行，第28行）
+
+**修改内容：**
+```typescript
+interface PlanDisplayProps {
+  plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增：用户资料（可选）
+}
+
+export default function PlanDisplay({ plan, profile }: PlanDisplayProps) {
+  return (
+    <div className="space-y-6">
+      {/* ... */}
+      <ExportButtons plan={plan} profile={profile} />
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+### Results | 结果
+- ✅ 生成计划后，用户信息以美观的卡片形式展示
+- ✅ 导出图片时可选是否包含用户基本信息
+- ✅ 用户体验更连贯：填写 → 生成 → 查看信息
+- ✅ 分享图片更个性化：可显示为谁定制的计划
+
+### Testing | 测试
+- [x] 本地开发服务器测试（`npm run dev`）
+- [x] 用户信息卡片正确显示所有字段
+- [x] 约束条件和备注信息正确显示
+- [x] 响应式布局：移动端、平板、桌面端都正常
+- [x] 导出图片时复选框功能正常
+- [x] 简略版和详细版都支持显示用户信息
+- [x] 用户信息在导出图片中正确显示
+
+### Notes | 备注
+- 使用 TypeScript 可选参数模式（`profile?: UserProfile`），确保向后兼容
+- 条件渲染 `profile && <Component />` 避免空值错误
+- 用户信息卡片使用 `print:hidden` 类，打印时自动隐藏（避免冗余）
+- 未来优化：可让用户自定义卡片中显示哪些信息项
+
+---
+
+## [2026-01-16 18:45] - 新功能：重新生成按钮
+
+### Operation | 操作
+在用户信息卡片中添加"重新生成"按钮，让用户可以返回表单填写界面，无需刷新页面。
+
+**用户需求：**
+"很好，功能都完善了，但是现在用户如果想要重新生成的话，没有重新提交表单的入口按键"
+
+### Files Modified | 修改的文件
+
+#### 1. `src/components/UserProfileCard.tsx`
+**修改位置：** 添加重新生成按钮（第76-87行）
+
+**修改内容：**
+```typescript
+interface UserProfileCardProps {
+  profile: UserProfile;
+  onRegenerate?: () => void; // ✅ 新增：重新生成回调
+}
+
+export default function UserProfileCard({ profile, onRegenerate }: UserProfileCardProps) {
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 shadow-card p-6">
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          {/* ... 图标和标题 ... */}
+        </div>
+
+        {/* ✅ 重新生成按钮 */}
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-200 hover:border-blue-300 rounded-lg transition-all font-medium shadow-sm hover:shadow"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>重新生成</span>
+          </button>
+        )}
+      </div>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+**设计亮点：**
+- 使用刷新图标（↻），语义清晰
+- 白色背景 + 蓝色边框，与卡片背景形成对比
+- hover 效果：背景变灰 + 边框加深 + 阴影增强
+- 可选回调：通过 `onRegenerate?` 实现可选功能
+
+#### 2. `src/App.tsx`
+**修改位置：** 添加 handleRegenerate 函数（第79-91行）
+
+**修改内容：**
+```typescript
+// ✅ 新增：重新生成（返回表单填写界面）
+const handleRegenerate = () => {
+  // 清空当前计划，返回到表单填写界面
+  setPlan(null);
+  setLastProfile(null);
+  setStreamContent('');
+  setStreamReasoning('');
+  setError(null);
+  setProgress(null);
+
+  // 滚动到页面顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+```
+
+**传递回调给 UserProfileCard：**
+```typescript
+{lastProfile && (
+  <div className="max-w-7xl mx-auto print:hidden">
+    <UserProfileCard
+      profile={lastProfile}
+      onRegenerate={handleRegenerate} // ✅ 传递回调
+    />
+  </div>
+)}
+```
+
+**状态清空策略：**
+- `setPlan(null)` - 清空生成的计划
+- `setLastProfile(null)` - 清空用户资料
+- `setStreamContent('')` - 清空流式内容
+- `setStreamReasoning('')` - 清空推理内容
+- `setError(null)` - 清空错误信息
+- `setProgress(null)` - 清空进度状态
+
+### Results | 结果
+- ✅ 用户可以通过点击按钮返回表单填写界面
+- ✅ 所有状态正确清空，表单重置为初始状态
+- ✅ 页面自动滚动到顶部，用户体验流畅
+- ✅ 无需刷新页面，保留了 SPA（单页应用）的优势
+
+### Testing | 测试
+- [x] 本地开发服务器测试（`npm run dev`）
+- [x] 点击按钮后正确返回表单界面
+- [x] 所有状态正确清空
+- [x] 页面滚动到顶部
+- [x] 重新填写表单并生成计划功能正常
+
+### Notes | 备注
+- 这是完整用户工作流的关键补充：填写 → 生成 → 查看 → 重新生成
+- 使用 `scrollTo({ behavior: 'smooth' })` 提供流畅的滚动体验
+- 可选回调设计确保组件的复用性（没有回调时不显示按钮）
+
+---
+
+## [2026-01-16 19:00] - 重构：统一页面布局风格
+
+### Operation | 操作
+统一初始页面和生成后页面的布局风格，从左右分栏改为上下布局。
+
+**用户反馈：**
+"同时我觉得为了风格统一，是不是可以把一开始的左右分栏排布，变成和后面生成完成之后的上下分布的排版"
+
+**设计目标：**
+- 初始页面：从左右分栏 → 上下布局
+- 使用相同的容器和间距，保持视觉一致性
+
+### Files Modified | 修改的文件
+
+#### `src/App.tsx`
+**修改位置：** 初始页面布局（第99-181行）
+
+**修改前（左右分栏）：**
+```typescript
+{!plan ? (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {/* 左侧：表单区域 */}
+    <div>
+      <InputForm onGenerate={handleGenerate} />
+    </div>
+
+    {/* 右侧：状态显示区域 */}
+    <div>
+      {/* 流式生成、加载中、错误、空状态 */}
+    </div>
+  </div>
+) : (
+  // ... 生成后的上下布局
+)}
+```
+
+**修改后（上下布局）：**
+```typescript
+{!plan ? (
+  <div className="max-w-7xl mx-auto space-y-6">
+    {/* 表单区域 */}
+    <div>
+      <InputForm onGenerate={handleGenerate} />
+    </div>
+
+    {/* 状态显示区域 */}
+    <div>
+      {/* 流式生成、加载中、错误、空状态 */}
+    </div>
+  </div>
+) : (
+  // ... 生成后的上下布局（保持不变）
+)}
+```
+
+**文本调整：**
+```typescript
+// 空状态卡片
+<h3 className="text-xl font-semibold text-gray-700 mb-2">
+  准备开始 {/* 之前：还没有生成计划 */}
+</h3>
+<p className="text-gray-500">
+  填写上方表单，点击「生成训练计划」按钮开始 {/* 之前：填写左侧表单 */}
+</p>
+```
+
+### Results | 结果
+- ✅ 初始页面和生成后页面布局风格统一
+- ✅ 使用相同的容器（`max-w-7xl mx-auto`）和间距（`space-y-6`）
+- ✅ 视觉风格更加一致和协调
+- ✅ 移动端体验更好（无需考虑左右分栏的响应式）
+
+### Testing | 测试
+- [x] 本地开发服务器测试（`npm run dev`）
+- [x] 生产构建成功（`npm run build`）
+- [x] 初始页面布局正确显示
+- [x] 生成后页面布局保持不变
+- [x] 响应式布局在移动端、平板、桌面端都正常
+
+### Notes | 备注
+- **移除了 lg:grid-cols-2**：简化了响应式逻辑
+- **统一容器**：初始页面和生成后页面都使用 `max-w-7xl mx-auto`
+- **统一间距**：都使用 `space-y-6` 实现垂直堆叠
+- **更符合自然阅读流**：从上到下填写和查看，符合用户习惯
+
+---
+
