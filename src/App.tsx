@@ -136,7 +136,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* ✅ 新手引导 */}
-      <Tutorial run={runTutorial} onTourComplete={handleTourComplete} />
+      <Tutorial run={runTutorial} onTourComplete={handleTourComplete} hasPlan={!!plan} />
 
       <Header onRestartTutorial={handleRestartTutorial} />
 
