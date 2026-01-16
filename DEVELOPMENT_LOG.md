@@ -3032,3 +3032,197 @@ if (plan.period === 'quarter' && plan.months) {
 
 ---
 
+## [2026-01-16 20:00] - 新功能：生成完成后的感谢弹窗
+
+### Operation | 操作
+添加用户感谢弹窗功能，在训练计划生成成功后自动弹出，显示收款码并感谢用户支持。
+
+**用户需求：**
+在生成完成时弹出一个可爱的弹窗，显示支付宝和微信收款码，文案表达感谢和支持，使用颜表情增加趣味性。
+
+### Files Modified | 修改的文件
+
+#### 1. `src/components/DonationsModal.tsx` （新文件）
+**功能：** 感谢弹窗组件，在计划生成成功后显示
+
+**核心特性：**
+```typescript
+interface DonationsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function DonationsModal({ isOpen, onClose }: DonationsModalProps) {
+  // 弹窗内容
+  // 1. 成功提示区域
+  // 2. 感谢文案区域
+  // 3. 收款码展示区域
+  // 4. 操作按钮区域
+}
+```
+
+**UI 设计亮点：**
+1. **现代化设计**：
+   - 圆角卡片布局（rounded-3xl）
+   - 阴影效果（shadow-2xl）
+   - 渐变色背景和边框
+   - 响应式设计，适配移动端
+
+2. **成功提示区域**：
+   - 绿色渐变圆形图标（带 bounce 动画）
+   - \"训练计划生成！✅\" 大标题
+   - 渐变色文字（blue-600 to purple-600）
+   - 友好提示语：\"您的专属健身计划已经准备好啦！💪\"
+
+3. **感谢文案区域**：
+   - 紫粉渐变背景卡片
+   - 🎉 颜表情装饰
+   - \"感谢使用 Workout Plan Generator！\"
+   - \"如果这个计划对您有帮助，欢迎请我喝杯奶茶 ☕️~\"
+   - \"您的支持是我持续优化和更新的动力 🚀\"
+   - \"（完全自愿，不强制哦~ 😊）\"
+
+4. **收款码展示区域**：
+   - **支付宝卡片**：
+     - 蓝色主题（bg-blue-50, border-blue-200）
+     - 💰 图标 + \"支付宝\"标题
+     - \"扫一扫请喝奶茶 🥤\"
+     - 白色圆角容器展示收款码图片
+   - **微信支付卡片**：
+     - 绿色主题（bg-green-50, border-green-200）
+     - 💚 图标 + \"微信支付\"标题
+     - \"扫一扫请喝奶茶 🧋\"
+     - 白色圆角容器展示收款码图片
+
+5. **操作按钮区域**：
+   - \"开始训练 🏋️‍♂️\"（主按钮，蓝色渐变）
+   - \"稍后再说 👋\"（次要按钮，灰色）
+   - 按钮悬停效果（hover:scale-105, shadow-xl）
+
+6. **动画效果**：
+   - 淡入动画（animate-fade-in）
+   - 成功图标弹跳动画（animate-bounce）
+   - 按钮缩放效果（transform hover:scale-105）
+
+**图片加载处理：**
+```typescript
+<img
+  src="/images/alipay-qr.jpg"
+  alt="支付宝收款码"
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.style.display = 'none';
+    target.parentElement!.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+  }}
+/>
+```
+
+#### 2. `src/App.tsx`
+**修改位置：** 导入和状态管理（第7行，第31行，第66行，第218-221行）
+
+**修改内容：**
+
+1. **导入 DonationsModal 组件**：
+```typescript
+import DonationsModal from './components/DonationsModal';
+```
+
+2. **添加弹窗状态**：
+```typescript
+// 感谢弹窗状态
+const [showDonationModal, setShowDonationModal] = useState(false);
+```
+
+3. **生成成功后触发弹窗**：
+```typescript
+setPlan(newPlan);
+setProgress(null); // 完成后清空进度
+setShowDonationModal(true); // ✅ 显示感谢弹窗
+```
+
+4. **渲染弹窗组件**：
+```typescript
+{/* ✅ 感谢弹窗 */}
+<DonationsModal
+  isOpen={showDonationModal}
+  onClose={() => setShowDonationModal(false)}
+/>
+```
+
+#### 3. `public/images/alipay-qr.jpg` （新文件）
+**内容：** 支付宝收款码图片（139KB）
+**用途：** 显示支付宝支付二维码
+
+#### 4. `public/images/wechat-qr.jpg` （新文件）
+**内容：** 微信收款码图片（72KB）
+**用途：** 显示微信支付二维码
+
+#### 5. `README.md`
+**修改位置：** \"🙏 致谢\" 部分（第723-756行）
+
+**修改内容：**
+
+在原有致谢部分的基础上，添加了 **\"☕️ 请我喝奶茶\"** 子板块：
+
+```markdown
+### ☕️ 请我喝奶茶
+
+如果这个项目对您有帮助，欢迎请我喝杯奶茶！您的支持是我持续优化的动力 🚀
+
+**💰 支付宝**
+扫码即可支持，感谢您的鼓励！
+
+**💚 微信支付**
+您的每一份支持都是对我最大的肯定！
+
+**💖 感谢方式**
+- 完全自愿，不强制 😊
+- 金额随意，心意最重要 💝
+- 支持后可以在 Issues 留言，我会优先处理
+
+**🌟 为什么支持？**
+- ✅ 鼓励开源项目的持续维护
+- ✅ 支持独立开发者
+- ✅ 促进功能迭代和优化
+- ✅ 享受更好的服务体验
+
+无论是否支持，都感谢您的使用！愿您早日达成健身目标 💪🎯
+```
+
+### Results | 结果
+- ✅ 训练计划生成成功后自动弹出感谢弹窗
+- ✅ 弹窗设计精美，文案可爱，用户体验良好
+- ✅ 收款码图片正确显示
+- ✅ 提供了两种支持方式（支付宝 + 微信）
+- ✅ 强调自愿原则，不强制用户
+- ✅ README 中添加了感谢支持说明
+
+### Testing | 测试
+- [x] 本地构建成功（`npm run build`）
+- [x] TypeScript 编译通过
+- [x] 生成计划后弹窗正常显示
+- [x] 收款码图片加载正常
+- [x] 关闭按钮功能正常
+- [x] \"开始训练\"按钮关闭弹窗
+- [x] \"稍后再说\"按钮关闭弹窗
+- [x] 移动端响应式布局正常
+
+### Notes | 备注
+- **用户体验设计**：弹窗在生成成功后立即显示，时机合适
+- **非侵入式设计**：提供\"稍后再说\"选项，用户可以轻松关闭
+- **可爱风格**：使用大量颜表情和友好文案，降低抵触感
+- **透明原则**：明确说明\"完全自愿，不强制\"，保护用户体验
+- **图片优化**：收款码图片大小适中（72-139KB），加载快速
+- **可扩展性**：弹窗组件设计灵活，未来可以添加更多感谢方式
+
+**弹窗触发时机：**
+- 只在生成成功时触发（setShowDonationModal(true)）
+- 用户关闭后不会再次弹出（除非重新生成）
+- 不影响正常使用流程
+
+**未来优化方向：**
+- 可以添加\"下次不再显示\"选项
+- 可以记录用户是否已经支持过，避免重复提示
+- 可以添加更多支持方式（GitHub Sponsors、Patreon 等）
+
+---
