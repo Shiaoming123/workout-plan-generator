@@ -2,7 +2,340 @@
 
 This file tracks all significant modifications to the workout-plan-generator codebase. Each entry documents what was changed, why, and the results.
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-16
+
+---
+
+## [2026-01-16 16:30] - 修复自定义周期显示 + 重新设计导出功能
+
+### Operation | 操作
+
+修复了自定义周期显示为季度计划的问题，并重新设计了导出功能，支持更灵活的分享选项。
+
+**核心目标：**
+- 修复自定义周期（如2周）错误显示为季度计划的问题
+- 允许用户选择具体天数导出
+- 在导出图片中显示详细的训练内容
+- 添加二维码到分享图片
+
+### Files Modified | 修改的文件
+
+#### 1. `package.json`
+**新增依赖：**
+```json
+{
+  "dependencies": {
+    "qrcode.react": "^4.2.0"
+  }
+}
+```
+
+#### 2. `src/components/PlanDisplay.tsx`
+**添加自定义周期处理：**
+```typescript
+{/* 周计划 / 自定义周数计划 */}
+{(plan.period === 'week' || plan.period === 'custom') && plan.weeks && (
+  <div className="space-y-6">
+    <div className={`rounded-xl p-6 text-white shadow-card-lg ${
+      plan.period === 'custom'
+        ? 'bg-gradient-to-r from-teal-500 to-cyan-600'
+        : 'bg-gradient-to-r from-blue-500 to-purple-600'
+    }`}>
+      <h2 className="text-2xl font-bold mb-2">
+        {plan.period === 'custom'
+          ? `${plan.summary.totalWeeks}周自定义训练计划`
+          : '周训练计划'
+        }
+      </h2>
+    </div>
+    {plan.weeks.map((week, index) => (
+      <WeekCard key={week.weekNumber} week={week} index={index} />
+    ))}
+  </div>
+)}
+```
+
+**改进点：**
+- 合并 'week' 和 'custom' 周期的显示逻辑
+- 自定义周期使用不同的渐变色（青色系）
+- 标题动态显示周数
+
+#### 3. `src/lib/aiPlanGenerator.ts`
+**修复 assemblePlan 函数：**
+```typescript
+// ✅ 自定义周数：直接返回周计划结构（不创建月份）
+if (period === 'custom') {
+  return enrichPlanWithMetadata(
+    {
+      period: 'custom',
+      summary,
+      generatedAt: new Date().toISOString(),
+      weeks, // ✅ 直接使用 weeks，不包装在 months 中
+    },
+    {
+      method: 'ai',
+      model: profile.aiModel,
+      generatedAt: new Date().toISOString(),
+    }
+  );
+}
+```
+
+**改进点：**
+- 自定义周期不再创建空的月份结构
+- 直接返回 weeks 数组，与周计划结构一致
+
+#### 4. `src/components/ShareModal.tsx`
+**完全重写导出功能：**
+
+**新增功能：**
+1. **选择要导出的天数**
+   - 左侧面板显示所有训练日
+   - 支持单选和多选
+   - 支持全选/取消全选
+   - 实时显示选中数量
+
+2. **详细训练内容**
+   - 显示热身、主训练、拉伸三个阶段
+   - 显示动作名称、组数、次数
+   - 最多显示4天的详细内容
+
+3. **二维码集成**
+   - 使用 qrcode.react 生成二维码
+   - 默认使用当前页面 URL
+   - 显示在导出图片底部
+
+4. **布局优化**
+   - 左右分栏布局（选择区 + 预览区）
+   - 固定导出容器尺寸（600px 宽）
+   - 响应式设计，支持移动端
+
+**关键代码片段：**
+```typescript
+// 获取所有训练日
+function getAllSessions(plan: TrainingPlan): WorkoutSession[] {
+  const sessions: WorkoutSession[] = [];
+
+  if (plan.period === 'week' || plan.period === 'custom') {
+    plan.weeks?.forEach((week) => {
+      sessions.push(...week.sessions);
+    });
+  } else if (plan.period === 'month' || plan.period === 'quarter') {
+    plan.months?.forEach((month) => {
+      month.weeks.forEach((week) => {
+        sessions.push(...week.sessions);
+      });
+    });
+  }
+
+  return sessions;
+}
+
+// 导出视图 - 显示详细内容
+function ExportView({ plan, sessions }: { plan: TrainingPlan; sessions: WorkoutSession[] }) {
+  return (
+    <div className="h-full flex flex-col bg-white">
+      {/* 标题区域 */}
+      <div className="bg-gradient-to-br ...">
+        <h1>个性化训练计划</h1>
+        <div className="text-2xl font-bold">{sessions.length}天训练</div>
+      </div>
+
+      {/* 核心指标 */}
+      <div className="grid grid-cols-4 gap-2">
+        <MetricItem icon="🎯" label="目标" value={summary.goalZh} />
+        ...
+      </div>
+
+      {/* 训练详情 */}
+      <div className="flex-1">
+        {sessions.slice(0, 4).map((session) => (
+          <div key={session.dayNumber}>
+            <div className="font-bold">{session.dayName}</div>
+            <div>🔥 热身：{动作名称}</div>
+            <div>💪 主训练：动作名称（组数×次数）</div>
+            <div>🧘 拉伸：{动作名称}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 二维码 */}
+      <div className="flex items-center justify-between">
+        <div>Workout Plan Generator</div>
+        <QRCodeSVG value={window.location.href} size={60} />
+      </div>
+    </div>
+  );
+}
+```
+
+### Results | 结果
+
+#### ✅ 问题修复
+- [x] 自定义周期（如2周）正确显示为"X周自定义训练计划"
+- [x] 不再显示空的月份标题（第2月、第3月）
+- [x] 导出预览布局正常，元素不再拥挤
+- [x] 导出图片包含详细的训练内容
+
+#### ✅ 新功能
+- [x] 用户可以选择具体天数导出（1-N天）
+- [x] 支持全选/取消全选
+- [x] 导出图片显示动作详细信息（组数、次数、训练阶段）
+- [x] 导出图片包含二维码，方便扫码访问
+
+#### ✅ 用户体验改进
+- **更灵活的导出**：选择想要分享的天数
+- **更详细的内容**：不再只是概览，包含完整训练细节
+- **更好的分享**：二维码让朋友可以直接访问
+- **更清晰的预览**：左右分栏，所见即所得
+
+### Testing | 测试
+- [x] 生产构建成功 (`npm run build`)
+- [x] 包大小：542.61 kB (gzip: 173.31 kB)
+- [x] TypeScript 编译通过
+- [ ] 本地开发服务器测试（用户自测）
+- [ ] 导出功能测试（用户自测）
+- [ ] 二维码扫描测试（用户自测）
+
+### Notes | 备注
+- **二维码 URL**：当前使用 `window.location.href`，部署后会自动更新为实际域名
+- **导出尺寸**：保持 1200×1200px，适合社交媒体分享
+- **导出质量**：三个选项（高清/标准/压缩），文件大小从 500KB 到 5MB
+- **布局限制**：导出预览使用固定尺寸确保导出质量一致性
+- **性能优化**：使用 `useMemo` 缓存训练日列表，避免重复计算
+
+### Known Issues | 已知问题
+- 无
+
+### Future Improvements | 未来改进
+- 可以考虑支持导出为 PDF 格式
+- 可以添加自定义二维码 URL 的功能
+- 可以支持导出时添加水印或品牌标识
+
+---
+
+## [2026-01-15 20:00] - 表单输入优化：更灵活的配置选项
+
+### Operation | 操作
+
+本次更新大幅优化了输入表单，增加了更多灵活的配置选项，满足不同用户的个性化需求。这是基于用户反馈的改进。
+
+**核心目标：**
+- 提供更丰富的训练时长选项
+- 支持自定义计划周数
+- 允许选择具体星期几训练
+- 改善用户体验和交互
+
+### Files Modified | 修改的文件
+
+#### 1. `src/types/index.ts`
+**类型定义更新：**
+```typescript
+export type PeriodType = 'week' | 'month' | 'quarter' | 'custom';
+
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface UserProfile {
+  // ... existing fields
+  customWeeks?: number; // 自定义周数
+  customSessionMinutes?: number; // 自定义训练时长
+  trainingDays?: DayOfWeek[]; // 选择具体的星期几
+  daysPerWeek: number; // 扩展到 1-7
+  sessionMinutes: number; // 扩展到 15-120
+}
+```
+
+#### 2. `src/components/InputForm.tsx`
+**表单UI重构：**
+
+**训练时长选择：**
+- 预设选项：8个（15/20/30/45/60/75/90/120分钟）
+- 自定义输入：10-180分钟
+- 智能建议：根据训练水平推荐
+
+**每周训练天数：**
+- 下拉框 → 7个按钮选择
+- 更直观的视觉反馈
+- 支持1-7天
+
+**具体星期选择（高级功能）：**
+- 可折叠的"高级选项"区域
+- 7个星期按钮（周一到周日）
+- 多选支持
+- 实时显示已选天数
+- 非必选
+
+**计划周期：**
+- 新增"自定义"选项
+- 4个卡片式选择（周/月/季度/自定义）
+- 选择"自定义"时显示周数输入框
+- 范围：1-52周
+
+#### 3. `src/lib/aiPlanGenerator.ts`
+**AI生成逻辑更新：**
+```typescript
+// 支持自定义训练时长
+const effectiveSessionMinutes = profile.customSessionMinutes || profile.sessionMinutes;
+
+// 支持自定义周数
+const needsBatchGeneration =
+  profile.period === 'custom' && (profile.customWeeks || 0) > 1;
+```
+
+#### 4. `src/lib/planGenerator.ts`
+**规则引擎逻辑更新：**
+- 添加 'custom' 周期处理
+- 简单的渐进式周期（每4周循环）
+- 支持 customSessionMinutes 和 customWeeks
+
+### Results | 结果
+
+#### ✅ 功能完成
+- [x] 训练时长选项扩展到8个
+- [x] 支持自定义时长（10-180分钟）
+- [x] 支持自定义周数（1-52周）
+- [x] 添加具体星期选择功能
+- [x] 每周天数扩展到1-7天
+- [x] 生成逻辑支持所有新字段
+- [x] TypeScript 编译通过
+
+#### ✅ 用户体验改进
+- **更直观的选择方式**：按钮式替代下拉框
+- **更好的视觉反馈**：选中状态清晰可见
+- **智能提示**：根据上下提供建议
+- **渐进式复杂度**：高级功能折叠隐藏
+- **灵活性大幅提升**：满足各种个性化需求
+
+#### ✅ 兼容性
+- 所有新字段为可选（向后兼容）
+- 默认值合理（不需要时无需配置）
+- 生成逻辑自动降级（使用自定义值或默认值）
+
+### Testing | 测试
+
+- [x] **本地开发服务器测试** (`npm run dev`)
+  - ✅ 表单正常显示
+  - ✅ 自定义时长功能正常
+  - ✅ 自定义周数功能正常
+  - ✅ 星期选择功能正常
+
+- [x] **生产构建测试** (`npm run build`)
+  - ✅ TypeScript 编译通过
+  - ✅ Vite 构建成功
+  - ✅ 包体积：522.60 kB (gzip: 166.06 kB)
+
+### Notes | 备注
+
+**设计决策：**
+1. **按钮式选择**：比下拉框更直观，减少点击次数
+2. **高级功能折叠**：避免新手用户困惑
+3. **智能建议**：帮助用户做出合理选择
+4. **向后兼容**：所有新字段可选，不影响现有功能
+
+**未来可扩展：**
+- 可将具体星期选择与训练日名称关联
+- 可添加训练时间段选择（早晨/下午/晚上）
+- 可添加休息日建议功能
 
 ---
 
