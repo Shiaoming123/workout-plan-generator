@@ -64,27 +64,34 @@ export interface LoadDemoOptions {
  *
  * @param exerciseId - 运动 ID
  * @param options - 加载选项
+ * @param options.exerciseName - 运动英文名称（可选，用于直接搜索）
+ * @param options.exerciseNameZh - 运动中文名称（可选）
  * @returns 运动演示数据
  */
 export async function loadExerciseDemo(
   exerciseId: string,
-  options: LoadDemoOptions = {}
+  options: LoadDemoOptions & {
+    exerciseName?: string;
+    exerciseNameZh?: string;
+  } = {}
 ): Promise<ExerciseDemo> {
   const {
     useCache = true,
     saveToCache = true,
     loadVideo = true,
     timeout = 10000,
+    exerciseName: providedExerciseName,
+    exerciseNameZh: providedExerciseNameZh,
   } = options;
 
-  // 1. 检查缓存
+  // 1. 检查缓存（使用 ID）
   if (useCache) {
     const cached = getCachedDemo(exerciseId);
     if (cached) {
       return {
         exerciseId: cached.exerciseId,
-        exerciseName: cached.name,
-        exerciseNameZh: '', // 需要从映射表获取
+        exerciseName: providedExerciseName || cached.name,
+        exerciseNameZh: providedExerciseNameZh || '',
         imageUrl: cached.imageUrl,
         videoUrl: cached.videoUrl,
         apiExerciseId: cached.apiExerciseId,
@@ -103,8 +110,8 @@ export async function loadExerciseDemo(
   if (!isExerciseDBConfigured()) {
     return {
       exerciseId,
-      exerciseName: '',
-      exerciseNameZh: '',
+      exerciseName: providedExerciseName || '',
+      exerciseNameZh: providedExerciseNameZh || '',
       imageUrl: '',
       videoUrl: '',
       apiExerciseId: '',
@@ -114,37 +121,43 @@ export async function loadExerciseDemo(
     };
   }
 
-  // 3. 获取映射信息
-  const mapping = getExerciseMapping(exerciseId);
-  if (!mapping) {
-    return {
-      exerciseId,
-      exerciseName: '',
-      exerciseNameZh: '',
-      imageUrl: '',
-      videoUrl: '',
-      apiExerciseId: '',
-      bodyPart: '',
-      loadStatus: 'error',
-      error: `未找到运动 "${exerciseId}" 的映射配置`,
-    };
-  }
-
   try {
-    // 4. 调用 API 搜索
-    const apiExercise = await searchWithTimeout(mapping, timeout);
+    let apiExercise: AscendExercise | null = null;
+    let exerciseNameToUse = providedExerciseName;
+    let exerciseNameZhToUse = providedExerciseNameZh;
+
+    // 3. 尝试通过映射查找
+    const mapping = getExerciseMapping(exerciseId);
+
+    if (mapping) {
+      // 使用映射的搜索策略
+      apiExercise = await searchWithTimeout(mapping, timeout);
+      exerciseNameToUse = mapping.ourExerciseName;
+      exerciseNameZhToUse = mapping.ourExerciseNameZh;
+    } else if (providedExerciseName) {
+      // 4. 如果没有映射，直接用提供的运动名称搜索
+      console.log(`⚠️ 未找到 "${exerciseId}" 的映射，尝试直接用名称 "${providedExerciseName}" 搜索`);
+      const exercises = await searchExerciseByName(providedExerciseName);
+      if (exercises.length > 0) {
+        apiExercise = exercises[0];
+      }
+      exerciseNameToUse = providedExerciseName;
+      exerciseNameZhToUse = providedExerciseNameZh || '';
+    }
 
     if (!apiExercise) {
       return {
         exerciseId,
-        exerciseName: mapping.ourExerciseName,
-        exerciseNameZh: mapping.ourExerciseNameZh,
+        exerciseName: exerciseNameToUse || '',
+        exerciseNameZh: exerciseNameZhToUse || '',
         imageUrl: '',
         videoUrl: '',
         apiExerciseId: '',
         bodyPart: '',
         loadStatus: 'error',
-        error: `未找到 "${mapping.ourExerciseName}" 的演示资源`,
+        error: exerciseNameToUse
+          ? `未找到 "${exerciseNameToUse}" 的演示资源`
+          : `未找到运动 "${exerciseId}" 的映射配置`,
       };
     }
 
@@ -160,8 +173,8 @@ export async function loadExerciseDemo(
     // 6. 构建演示数据
     const demo: ExerciseDemo = {
       exerciseId,
-      exerciseName: mapping.ourExerciseName,
-      exerciseNameZh: mapping.ourExerciseNameZh,
+      exerciseName: exerciseNameToUse || '',
+      exerciseNameZh: exerciseNameZhToUse || '',
       imageUrl: finalApiExercise.imageUrl || '',
       videoUrl: finalApiExercise.videoUrl,
       apiExerciseId: finalApiExercise.exerciseId,
@@ -189,7 +202,7 @@ export async function loadExerciseDemo(
       });
     }
 
-    console.log(`✅ 成功加载运动演示: ${mapping.ourExerciseNameZh}`);
+    console.log(`✅ 成功加载运动演示: ${demo.exerciseNameZh}`);
     return demo;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '未知错误';
@@ -197,8 +210,8 @@ export async function loadExerciseDemo(
 
     return {
       exerciseId,
-      exerciseName: mapping.ourExerciseName,
-      exerciseNameZh: mapping.ourExerciseNameZh,
+      exerciseName: providedExerciseName || '',
+      exerciseNameZh: providedExerciseNameZh || '',
       imageUrl: '',
       videoUrl: '',
       apiExerciseId: '',

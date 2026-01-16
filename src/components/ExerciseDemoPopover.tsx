@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { loadExerciseDemo, type ExerciseDemo } from '../lib/exerciseDemoService';
 
 interface ExerciseDemoPopoverProps {
@@ -79,8 +80,12 @@ export default function ExerciseDemoPopover({
       setIsVisible(true);
       setIsLoading(true);
 
-      // 加载演示
-      loadExerciseDemo(exerciseId, { loadVideo: true }).then((loadedDemo) => {
+      // 加载演示，传入运动名称
+      loadExerciseDemo(exerciseId, {
+        loadVideo: true,
+        exerciseName,
+        exerciseNameZh,
+      }).then((loadedDemo) => {
         setDemo(loadedDemo);
         setIsLoading(false);
       });
@@ -116,7 +121,11 @@ export default function ExerciseDemoPopover({
       setIsVisible(true);
       setIsLoading(true);
 
-      loadExerciseDemo(exerciseId, { loadVideo: true }).then((loadedDemo) => {
+      loadExerciseDemo(exerciseId, {
+        loadVideo: true,
+        exerciseName,
+        exerciseNameZh,
+      }).then((loadedDemo) => {
         setDemo(loadedDemo);
         setIsLoading(false);
       });
@@ -155,8 +164,8 @@ export default function ExerciseDemoPopover({
     >
       {children}
 
-      {/* 悬浮框 */}
-      {isVisible && (
+      {/* 悬浮框 - 使用 Portal 渲染到 body */}
+      {isVisible && createPortal(
         <div
           ref={popoverRef}
           className="fixed z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
@@ -349,7 +358,8 @@ export default function ExerciseDemoPopover({
               💡 演示来自 ExerciseDB API
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

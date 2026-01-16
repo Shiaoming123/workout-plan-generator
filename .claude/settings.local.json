@@ -20,7 +20,8 @@
       "Bash(curl:*)",
       "Bash(wc:*)",
       "WebSearch",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(lsof:*)"
     ]
   }
 }
