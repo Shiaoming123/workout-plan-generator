@@ -29,7 +29,9 @@ export type ActivityPreference =
   | 'yoga_stretch'
   | 'mixed';
 
-export type PeriodType = 'week' | 'month' | 'quarter';
+export type PeriodType = 'week' | 'month' | 'quarter' | 'custom';
+
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 export interface UserProfile {
   goal: Goal;
@@ -38,8 +40,8 @@ export interface UserProfile {
   height: number; // cm
   weight: number; // kg
   experience: Experience;
-  daysPerWeek: number; // 2-6
-  sessionMinutes: number; // 20, 30, 45, 60, 90
+  daysPerWeek: number; // 1-7
+  sessionMinutes: number; // 15-120
   location: Location;
   equipment: Equipment[];
   constraints: Constraint[];
@@ -47,6 +49,10 @@ export interface UserProfile {
   likes: ActivityPreference[];
   dislikes: ActivityPreference[];
   period: PeriodType;
+  // ✅ 新增：更灵活的配置选项
+  customWeeks?: number; // 自定义周数（当 period 为 'custom' 时使用）
+  customSessionMinutes?: number; // 自定义训练时长（当选择"自定义"时使用）
+  trainingDays?: DayOfWeek[]; // 选择具体的星期几训练（可选，例如：[1, 3, 5] 表示周一、三、五）
   // ============ AI Integration Fields ============
   aiModel: 'deepseek-chat' | 'deepseek-reasoner'; // AI 模型选择
   goalNotes?: string; // 目标补充说明

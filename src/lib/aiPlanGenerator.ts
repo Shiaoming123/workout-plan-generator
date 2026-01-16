@@ -23,20 +23,29 @@ export async function generateAIPlanStreaming(
   onProgressUpdate?: (current: number, total: number) => void,
   abortSignal?: AbortSignal
 ): Promise<TrainingPlan> {
+  // ✅ 支持自定义训练时长
+  const effectiveSessionMinutes = profile.customSessionMinutes || profile.sessionMinutes;
+  const enhancedProfile = { ...profile, sessionMinutes: effectiveSessionMinutes };
+
   // 检查 API 配置
   if (!isAPIConfigured(profile.customAPI)) {
     console.warn('API 未配置，降级到规则引擎');
-    return generateRuleBasedPlan(profile, {
+    return generateRuleBasedPlan(enhancedProfile, {
       method: 'rule-based',
       fallbackReason: 'API Key 未配置',
       generatedAt: new Date().toISOString(),
     });
   }
 
-  // 判断是否需要分批生成（月计划或季度计划）
-  if (profile.period === 'month' || profile.period === 'quarter') {
+  // ✅ 判断是否需要分批生成（月计划、季度计划或自定义周数）
+  const needsBatchGeneration =
+    profile.period === 'month' ||
+    profile.period === 'quarter' ||
+    (profile.period === 'custom' && (profile.customWeeks || 0) > 1);
+
+  if (needsBatchGeneration) {
     console.log('📋 检测到长周期计划，使用按周分批生成策略');
-    return generatePlanByWeek(profile, onStreamUpdate, onProgressUpdate, abortSignal);
+    return generatePlanByWeek(enhancedProfile, onStreamUpdate, onProgressUpdate, abortSignal);
   }
 
   try {
@@ -319,7 +328,13 @@ export async function generatePlanByWeek(
   onProgressUpdate?: (current: number, total: number) => void,
   abortSignal?: AbortSignal
 ): Promise<TrainingPlan> {
-  const totalWeeks = profile.period === 'month' ? 4 : 12;
+  // ✅ 支持自定义周数
+  const totalWeeks =
+    profile.period === 'month' ? 4 :
+    profile.period === 'quarter' ? 12 :
+    profile.period === 'custom' ? (profile.customWeeks || 8) :
+    1; // 默认为周计划
+
   let completedWeeks = 0;
 
   console.log(`📋 开始并行生成 ${totalWeeks} 周计划...`);

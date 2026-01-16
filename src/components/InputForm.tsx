@@ -24,6 +24,10 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     likes: [],
     dislikes: [],
     period: 'week',
+    // ✅ 新增：更灵活的配置
+    customWeeks: 8, // 默认自定义周数
+    customSessionMinutes: 60, // 默认自定义时长
+    trainingDays: [], // 默认为空（使用 daysPerWeek）
     // AI Integration fields
     aiModel: 'deepseek-chat',
     goalNotes: '',
@@ -31,6 +35,9 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     equipmentNotes: '',
     preferencesNotes: '',
   });
+
+  // ✅ 新增：控制时长选择模式
+  const [customTimeMode, setCustomTimeMode] = useState(false);
 
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -382,42 +389,143 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 训练频率 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block font-semibold mb-2 text-gray-700">
-            每周训练天数 <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={profile.daysPerWeek}
-            onChange={(e) => updateField('daysPerWeek', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            {[2, 3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>
-                {n}天
-              </option>
-            ))}
-          </select>
+      <div className="mb-6">
+        <label className="block font-semibold mb-2 text-gray-700">
+          每周训练天数 <span className="text-red-500">*</span>
+        </label>
+        <div className="grid grid-cols-7 gap-2 mb-3">
+          {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => updateField('daysPerWeek', n)}
+              className={`py-2 px-3 rounded-lg border-2 transition-all font-medium ${
+                profile.daysPerWeek === n
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              }`}
+            >
+              {n}天
+            </button>
+          ))}
         </div>
 
-        <div>
-          <label className="block font-semibold mb-2 text-gray-700">
-            每次时长 (分钟) <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={profile.sessionMinutes}
-            onChange={(e) =>
-              updateField('sessionMinutes', parseInt(e.target.value))
-            }
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            {[20, 30, 45, 60, 90].map((n) => (
-              <option key={n} value={n}>
+        {/* 选择具体星期几（可选） */}
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 font-medium">
+            📅 高级：选择具体星期几训练（可选）
+          </summary>
+          <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">
+              选择您希望在每周的哪几天训练（不选则自动安排）
+            </p>
+            <div className="grid grid-cols-7 gap-2">
+              {[
+                { value: 'monday', label: '周一', short: '一' },
+                { value: 'tuesday', label: '周二', short: '二' },
+                { value: 'wednesday', label: '周三', short: '三' },
+                { value: 'thursday', label: '周四', short: '四' },
+                { value: 'friday', label: '周五', short: '五' },
+                { value: 'saturday', label: '周六', short: '六' },
+                { value: 'sunday', label: '周日', short: '日' },
+              ].map((day) => {
+                const isSelected = profile.trainingDays?.includes(day.value as any);
+                return (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => {
+                      const currentDays = profile.trainingDays || [];
+                      const newDays = isSelected
+                        ? currentDays.filter((d) => d !== day.value)
+                        : [...currentDays, day.value as any];
+                      updateField('trainingDays', newDays);
+                    }}
+                    className={`py-2 px-2 rounded-lg border-2 transition-all text-xs font-medium ${
+                      isSelected
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {day.short}
+                  </button>
+                );
+              })}
+            </div>
+            {profile.trainingDays && profile.trainingDays.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                已选择：{profile.trainingDays.length} 天 -
+                {profile.trainingDays.map((d) => {
+                  const day = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].indexOf(d)];
+                  return day;
+                }).join('、')}
+              </p>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* 每次训练时长 */}
+      <div className="mb-6">
+        <label className="block font-semibold mb-2 text-gray-700">
+          每次训练时长 (分钟) <span className="text-red-500">*</span>
+        </label>
+
+        {!customTimeMode ? (
+          <div className="grid grid-cols-4 gap-2">
+            {[15, 20, 30, 45, 60, 75, 90, 120].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => updateField('sessionMinutes', n)}
+                className={`py-2 px-3 rounded-lg border-2 transition-all font-medium ${
+                  profile.sessionMinutes === n
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
                 {n}分钟
-              </option>
+              </button>
             ))}
-          </select>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomTimeMode(true);
+                updateField('customSessionMinutes', profile.sessionMinutes);
+              }}
+              className="py-2 px-3 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 text-gray-600 font-medium transition-all"
+            >
+              自定义
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="10"
+                max="180"
+                value={profile.customSessionMinutes || 60}
+                onChange={(e) => updateField('customSessionMinutes', parseInt(e.target.value) || 60)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="py-2 text-gray-600">分钟</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomTimeMode(false);
+                  updateField('sessionMinutes', profile.customSessionMinutes || 60);
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 font-medium transition-all"
+              >
+                取消
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              建议：15-30分钟（新手），30-60分钟（进阶），60-90分钟（高级）
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 训练场地与器械 */}
@@ -539,25 +647,59 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         <label className="block font-semibold mb-2 text-gray-700">
           计划周期 <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {[
-            { value: 'week', label: '周 (1周)' },
-            { value: 'month', label: '月 (4周)' },
-            { value: 'quarter', label: '季度 (12周)' },
+            { value: 'week', label: '周计划', desc: '1周（快速体验）' },
+            { value: 'month', label: '月计划', desc: '4周（标准周期）' },
+            { value: 'quarter', label: '季度计划', desc: '12周（系统训练）' },
+            { value: 'custom', label: '自定义', desc: '自由指定周数' },
           ].map((opt) => (
-            <label key={opt.value} className="flex items-center cursor-pointer">
+            <label
+              key={opt.value}
+              className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                profile.period === opt.value
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
               <input
                 type="radio"
                 name="period"
                 value={opt.value}
                 checked={profile.period === opt.value}
                 onChange={(e) => updateField('period', e.target.value as any)}
-                className="mr-2"
+                className="mr-3"
               />
-              <span>{opt.label}</span>
+              <div>
+                <div className="font-medium text-gray-900">{opt.label}</div>
+                <div className="text-xs text-gray-500">{opt.desc}</div>
+              </div>
             </label>
           ))}
         </div>
+
+        {/* 自定义周数输入 */}
+        {profile.period === 'custom' && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <label className="block font-semibold mb-2 text-blue-900">
+              输入训练周数
+            </label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={profile.customWeeks || 8}
+                onChange={(e) => updateField('customWeeks', Math.min(52, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="flex-1 max-w-xs px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+              <span className="text-blue-700 font-medium">周</span>
+            </div>
+            <p className="text-xs text-blue-700 mt-2">
+              💡 建议：4-8周适合初学者，12-16周适合进阶训练
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 提交按钮 */}
