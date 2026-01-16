@@ -2733,3 +2733,66 @@ const handleRegenerate = () => {
 
 ---
 
+## [2026-01-16 19:15] - Bug 修复：导出图片时训练日按顺序排列
+
+### Operation | 操作
+修复用户反馈的分享导出功能bug：在选择导出训练日时，如果不按次序选择（例如先选 day 3，再选 day 1），生成的分享图片中训练信息顺序会混乱，不是按照 day 1、day 2、day 3 的顺序排列。
+
+**用户需求：**
+"现在有个小地方需要优化一下，在分享图片预览界面里面如果我不按次序选择day 1、day 2的展示信息的话，最后生成的分享图片里面的训练信息也不会是按次序来的"
+
+### Files Modified | 修改的文件
+
+#### `src/components/ShareModal.tsx`
+**修改位置：** `selectedSessions` 计算逻辑（第63-68行）
+
+**根本原因：**
+```typescript
+// 之前的代码（有问题）
+const selectedSessions = useMemo(() => {
+  return Array.from(selectedDays).map((index) => allSessions[index]);
+}, [selectedDays, allSessions]);
+```
+
+问题分析：
+1. `selectedDays` 是 `Set<number>` 类型，存储被选中的训练日索引
+2. `Array.from(selectedDays)` 会按照 **Set 的迭代顺序** 返回数组
+3. Set 的迭代顺序是 **插入顺序**，而不是数字大小顺序
+4. 如果用户先选择 day 3（index=2），再选择 day 1（index=0），最终顺序会是 [day3, day1]
+
+**修复方案：**
+```typescript
+// 修复后的代码
+const selectedSessions = useMemo(() => {
+  return Array.from(selectedDays)
+    .sort((a, b) => a - b) // ✅ 先对索引排序（升序）
+    .map((index) => allSessions[index]);
+}, [selectedDays, allSessions]);
+```
+
+修复说明：
+- 在映射之前先对索引数组进行升序排序：`.sort((a, b) => a - b)`
+- 这样无论用户以什么顺序选择训练日，最终都会按 dayNumber 的顺序排列
+- 确保导出的图片始终显示为 day 1、day 2、day 3... 的顺序
+
+### Results | 结果
+- ✅ 修复后，用户无论以什么顺序选择训练日，导出图片都会按正确顺序显示
+- ✅ 改善了用户体验：选择顺序不影响最终输出顺序
+- ✅ 符合用户预期：训练计划应该按时间顺序排列
+
+### Testing | 测试
+- [x] 本地构建成功（`npm run build`）
+- [x] TypeScript 编译通过
+- [x] 测试场景1：先选 day 3，再选 day 1 → 输出顺序正确（day 1, day 3）
+- [x] 测试场景2：乱序选择多个（day 5, day 2, day 7, day 1） → 输出顺序正确（day 1, day 2, day 5, day 7）
+- [x] 测试场景3：全选 → 输出顺序正确（所有训练日按顺序）
+
+### Notes | 备注
+- **Set 的特性**：Set 是 ES6 中的一种数据结构，它保持值的唯一性，但也保持插入顺序
+- **Array.from()**：将可迭代对象（Set、Map等）转换为数组，保持迭代顺序
+- **sort() 默认行为**：对数字数组使用默认排序会转换为字符串比较，所以必须提供比较函数 `(a, b) => a - b`
+- **性能影响**：排序操作的时间复杂度是 O(n log n)，但对于训练日数量（通常7天以下）可以忽略
+- **用户体验**：这个修复让"选择"和"结果"解耦，用户可以随意点击，但输出始终有序
+
+---
+
