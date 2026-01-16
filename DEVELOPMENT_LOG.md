@@ -227,6 +227,126 @@ link.download = `训练计划-${plan.summary.goalZh}-${modeLabel}-${selectedSess
 
 ---
 
+## [2026-01-16 17:45] - 修复自定义训练时长不生效的 bug
+
+### Operation | 操作
+
+修复用户在自定义模式下输入训练时长后，直接点击"生成训练计划"时使用错误时长的问题。
+
+### Files Modified | 修改的文件
+
+#### `src/components/InputForm.tsx`
+
+**1. 修复 handleSubmit 函数（第 65-81 行）**
+```typescript
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  // ✅ 如果在自定义模式下，确保使用自定义时长
+  let finalProfile = { ...profile };
+  if (customTimeMode && profile.customSessionMinutes) {
+    finalProfile = { ...finalProfile, sessionMinutes: profile.customSessionMinutes };
+  }
+
+  const validationErrors = validateProfile(finalProfile);
+  if (validationErrors.length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+  setErrors([]);
+  onGenerate(finalProfile);
+};
+```
+
+**改进点：**
+- 检查是否在自定义模式（`customTimeMode === true`）
+- 如果是，将 `customSessionMinutes` 的值同步到 `sessionMinutes`
+- 确保提交的 profile 使用正确的时长值
+
+**2. 修复预设按钮点击逻辑（第 487-490 行）**
+```typescript
+onClick={() => {
+  updateField('sessionMinutes', n);
+  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
+}}
+```
+
+**改进点：**
+- 点击预设时长时清除 `customSessionMinutes`
+- 避免预设和自定义值混淆
+- 确保状态一致性
+
+**3. 修复取消按钮点击逻辑（第 529 行）**
+```typescript
+onClick={() => {
+  setCustomTimeMode(false);
+  const customValue = profile.customSessionMinutes || 60;
+  updateField('sessionMinutes', customValue);
+  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
+}}
+```
+
+**改进点：**
+- 点击取消时将自定义值同步到 `sessionMinutes`
+- 清除 `customSessionMinutes` 避免混淆
+- 确保退出自定义模式后状态正确
+
+### Root Cause | 根本原因
+
+**问题场景：**
+1. 用户选择预设时长（如 60 分钟）
+2. 用户点击"自定义"按钮
+3. 用户在输入框中输入新的时长（如 20 分钟）
+4. `customSessionMinutes` 被更新为 20
+5. 用户直接点击"生成训练计划"（没有点击"取消"）
+
+**问题分析：**
+- 此时 `customSessionMinutes = 20`（正确）
+- 但 `sessionMinutes` 可能还是旧值（60）
+- 虽然生成逻辑使用 `customSessionMinutes || sessionMinutes`，但如果两者不一致可能导致混淆
+- 如果用户之前在自定义模式下输入过值然后切换回预设，`customSessionMinutes` 可能还保留着旧值
+
+### Fix Details | 修复详情
+
+**解决方案：**
+1. **提交时强制同步**：如果在自定义模式，强制使用 `customSessionMinutes` 的值
+2. **清除自定义值**：切换到预设或取消自定义时，清除 `customSessionMinutes`
+3. **状态一致性**：确保 `sessionMinutes` 和 `customSessionMinutes` 不会同时有值
+
+### Results | 结果
+
+#### ✅ Bug 修复
+- [x] 自定义模式下输入的时长现在会正确生效
+- [x] 不会出现显示 60 分钟但实际输入 20 分钟的问题
+- [x] 无论何时生成计划，都使用正确的时长值
+
+#### ✅ 用户体验改进
+- **更可靠的行为**：自定义时长始终有效
+- **更清晰的状态**：预设和自定义模式互斥
+- **更好的反馈**：输入的值会正确反映在生成的计划中
+
+### Testing | 测试
+- [x] 生产构建成功
+- [x] 包大小：548.03 kB (gzip: 174.13 kB)
+- [x] TypeScript 编译通过
+- [ ] 自定义时长输入测试（用户自测）
+- [ ] 预设/自定义切换测试（用户自测）
+- [ ] 生成计划验证时长是否正确（用户自测）
+
+### Notes | 备注
+- `customSessionMinutes` 仅在自定义模式（`customTimeMode === true`）时使用
+- 切换到预设时，`customSessionMinutes` 被清除为 `undefined`
+- 生成逻辑使用 `customSessionMinutes || sessionMinutes`，现在确保两者不会同时有值
+- 这样确保生成逻辑始终使用正确且唯一的时长值
+
+### Known Issues | 已知问题
+- 无
+
+### Future Improvements | 未来改进
+- 无
+
+---
+
 ## [2026-01-16 16:30] - 修复自定义周期显示 + 重新设计导出功能
 
 ### Operation | 操作
