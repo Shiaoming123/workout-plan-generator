@@ -739,6 +739,16 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ## 🙏 致谢
 
+### 开发工具
+本项目使用 **[Claude Code](https://claude.ai/code)** + **[GLM coding 4.7](https://github.com/GLM-Helper/GLM-Coding)** 辅助编程开发，通过 AI 协作大幅提升开发效率和代码质量。
+
+**Claude Code** & **GLM coding 4.7** 的优势：
+- ✅ 智能代码生成与重构
+- ✅ 快速问题诊断与修复
+- ✅ 最佳实践建议
+- ✅ 自动化文档生成
+- ✅ 高效开发工作流
+
 ### 技术支持
 - [DeepSeek](https://www.deepseek.com/) - AI 大模型支持
 - [React](https://reactjs.org/) - 前端框架
