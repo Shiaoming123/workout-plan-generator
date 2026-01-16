@@ -1,4 +1,4 @@
-import { TrainingPlan } from '../types';
+import { TrainingPlan, UserProfile } from '../types';
 import SummaryCard from './cards/SummaryCard';
 import MetadataCard from './cards/MetadataCard';
 import WeekCard from './cards/WeekCard';
@@ -7,9 +7,10 @@ import ReasoningDisplay from './ReasoningDisplay';
 
 interface PlanDisplayProps {
   plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增：用户资料（可选）
 }
 
-export default function PlanDisplay({ plan }: PlanDisplayProps) {
+export default function PlanDisplay({ plan, profile }: PlanDisplayProps) {
   return (
     <div className="space-y-6">
       {/* 概览卡片 */}
@@ -24,7 +25,7 @@ export default function PlanDisplay({ plan }: PlanDisplayProps) {
       )}
 
       {/* 导出按钮 */}
-      <ExportButtons plan={plan} />
+      <ExportButtons plan={plan} profile={profile} />
 
       {/* 训练计划内容 */}
       <div className="space-y-6">

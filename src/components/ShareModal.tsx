@@ -1,10 +1,11 @@
 import { useState, useRef, useMemo } from 'react';
-import { TrainingPlan, WorkoutSession } from '../types';
+import { TrainingPlan, WorkoutSession, UserProfile } from '../types';
 import { toPng } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface ShareModalProps {
   plan: TrainingPlan;
+  profile: UserProfile; // ✅ 新增：用户资料
   isOpen: boolean;
   onClose: () => void;
 }
@@ -28,10 +29,11 @@ function getAllSessions(plan: TrainingPlan): WorkoutSession[] {
   return sessions;
 }
 
-export default function ShareModal({ plan, isOpen, onClose }: ShareModalProps) {
+export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportQuality, setExportQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [exportMode, setExportMode] = useState<'simple' | 'detailed'>('simple');
+  const [showUserProfile, setShowUserProfile] = useState(false); // ✅ 新增：是否显示用户信息
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -205,6 +207,23 @@ export default function ShareModal({ plan, isOpen, onClose }: ShareModalProps) {
                 </div>
               </div>
 
+              {/* ✅ 新增：显示用户信息选项 */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">附加选项</h3>
+                <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={showUserProfile}
+                    onChange={(e) => setShowUserProfile(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <div className="ml-3">
+                    <div className="font-medium text-sm text-gray-900">显示个人信息</div>
+                    <div className="text-xs text-gray-500">在图片顶部显示年龄、体重、目标等基本信息</div>
+                  </div>
+                </label>
+              </div>
+
               <h3 className="font-semibold text-gray-900">预览</h3>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 overflow-auto max-h-[400px]">
                 <div
@@ -218,9 +237,9 @@ export default function ShareModal({ plan, isOpen, onClose }: ShareModalProps) {
                 >
                   {selectedSessions.length > 0 ? (
                     exportMode === 'simple' ? (
-                      <SimpleExportView plan={plan} sessions={selectedSessions} />
+                      <SimpleExportView plan={plan} sessions={selectedSessions} profile={profile} showUserProfile={showUserProfile} />
                     ) : (
-                      <DetailedExportView plan={plan} sessions={selectedSessions} />
+                      <DetailedExportView plan={plan} sessions={selectedSessions} profile={profile} showUserProfile={showUserProfile} />
                     )
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-400">
@@ -308,7 +327,12 @@ export default function ShareModal({ plan, isOpen, onClose }: ShareModalProps) {
 }
 
 // 简略版导出视图
-function SimpleExportView({ plan, sessions }: { plan: TrainingPlan; sessions: WorkoutSession[] }) {
+function SimpleExportView({ plan, sessions, profile, showUserProfile }: {
+  plan: TrainingPlan;
+  sessions: WorkoutSession[];
+  profile: UserProfile; // ✅ 新增
+  showUserProfile: boolean; // ✅ 新增
+}) {
   const { summary } = plan;
 
   const goalGradients: Record<string, string> = {
@@ -325,7 +349,7 @@ function SimpleExportView({ plan, sessions }: { plan: TrainingPlan; sessions: Wo
 
   return (
     <div className="h-full flex flex-col bg-white" style={{ minHeight: '600px' }}>
-      {/* 顶部标题区域 */}
+      {/* ✅ 顶部标题区域 - 包含用户信息或仅计划标题 */}
       <div className={`bg-gradient-to-br ${gradientClass} px-6 py-4 text-white`}>
         <div className="flex items-center justify-between">
           <div>
@@ -337,6 +361,30 @@ function SimpleExportView({ plan, sessions }: { plan: TrainingPlan; sessions: Wo
             <div className="text-xs opacity-90">天训练</div>
           </div>
         </div>
+
+        {/* ✅ 显示用户基本信息 */}
+        {showUserProfile && (
+          <div className="mt-3 pt-3 border-t border-white border-opacity-20">
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center space-x-1">
+                <span>👤</span>
+                <span>{profile.gender === 'male' ? '男' : profile.gender === 'female' ? '女' : '其他'}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>🎂</span>
+                <span>{profile.age}岁</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>📏</span>
+                <span>{profile.height}cm</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>⚖️</span>
+                <span>{profile.weight}kg</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 核心指标 */}
@@ -431,7 +479,12 @@ function SimpleExportView({ plan, sessions }: { plan: TrainingPlan; sessions: Wo
 }
 
 // 详细版导出视图
-function DetailedExportView({ plan, sessions }: { plan: TrainingPlan; sessions: WorkoutSession[] }) {
+function DetailedExportView({ plan, sessions, profile, showUserProfile }: {
+  plan: TrainingPlan;
+  sessions: WorkoutSession[];
+  profile: UserProfile; // ✅ 新增
+  showUserProfile: boolean; // ✅ 新增
+}) {
   const { summary } = plan;
 
   const goalGradients: Record<string, string> = {
@@ -460,6 +513,30 @@ function DetailedExportView({ plan, sessions }: { plan: TrainingPlan; sessions: 
             <div className="text-xs opacity-90">天训练</div>
           </div>
         </div>
+
+        {/* ✅ 显示用户基本信息 */}
+        {showUserProfile && (
+          <div className="mt-3 pt-3 border-t border-white border-opacity-20">
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center space-x-1">
+                <span>👤</span>
+                <span>{profile.gender === 'male' ? '男' : profile.gender === 'female' ? '女' : '其他'}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>🎂</span>
+                <span>{profile.age}岁</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>📏</span>
+                <span>{profile.height}cm</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span>⚖️</span>
+                <span>{profile.weight}kg</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 核心指标 */}

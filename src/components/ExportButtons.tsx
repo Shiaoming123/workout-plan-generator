@@ -1,13 +1,14 @@
-import { TrainingPlan } from '../types';
+import { TrainingPlan, UserProfile } from '../types';
 import { downloadJSON, copyToClipboard, printPlan } from '../utils/export';
 import { useState } from 'react';
 import ShareModal from './ShareModal';
 
 interface ExportButtonsProps {
   plan: TrainingPlan;
+  profile?: UserProfile; // ✅ 新增：用户资料（可选）
 }
 
-export default function ExportButtons({ plan }: ExportButtonsProps) {
+export default function ExportButtons({ plan, profile }: ExportButtonsProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -104,11 +105,14 @@ export default function ExportButtons({ plan }: ExportButtonsProps) {
       </div>
 
       {/* 导出图片弹窗 */}
-      <ShareModal
-        plan={plan}
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-      />
+      {profile && (
+        <ShareModal
+          plan={plan}
+          profile={profile}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </>
   );
 }
