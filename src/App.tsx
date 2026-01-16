@@ -4,6 +4,7 @@ import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
+import DonationsModal from './components/DonationsModal';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
@@ -25,6 +26,9 @@ export default function App() {
 
   // 进度状态（用于按周生成）
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // 感谢弹窗状态
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
@@ -59,6 +63,7 @@ export default function App() {
 
       setPlan(newPlan);
       setProgress(null); // 完成后清空进度
+      setShowDonationModal(true); // ✅ 显示感谢弹窗
     } catch (error: any) {
       console.error('生成计划失败:', error);
       setError(error.message || '生成计划失败，请稍后重试');
@@ -191,7 +196,11 @@ export default function App() {
 
             {/* 训练计划全宽显示 */}
             <div className="max-w-7xl mx-auto">
-              <PlanDisplay plan={plan} profile={lastProfile || undefined} />
+              <PlanDisplay
+                plan={plan}
+                profile={lastProfile || undefined}
+                onOpenDonationModal={() => setShowDonationModal(true)}
+              />
             </div>
           </div>
         )}
@@ -200,14 +209,29 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-6 mt-12 print:hidden">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm">
+          <p className="text-sm mb-2">
             训练计划生成器 | Workout Plan Generator MVP
           </p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-gray-400 mb-3">
             仅供参考，训练前请咨询专业教练或医生
           </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-300">
+            <span>💬 技术交流 & 商务合作：</span>
+            <a
+              href="weixin://"
+              className="text-blue-400 hover:text-blue-300 font-medium"
+            >
+              Hen18175566208
+            </a>
+          </div>
         </div>
       </footer>
+
+      {/* ✅ 感谢弹窗 */}
+      <DonationsModal
+        isOpen={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+      />
     </div>
   );
 }

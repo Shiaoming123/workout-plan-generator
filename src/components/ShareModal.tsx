@@ -60,9 +60,14 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
     setSelectedDays(newSelected);
   };
 
-  // 获取选中的训练日
+  // 获取选中的训练日（按 dayNumber 排序，确保顺序一致）
   const selectedSessions = useMemo(() => {
-    return Array.from(selectedDays).map((index) => allSessions[index]);
+    // 使用 Set 去重，防止快速点击时出现重复
+    const uniqueIndices = Array.from(new Set(Array.from(selectedDays)));
+    return uniqueIndices
+      .filter(index => index >= 0 && index < allSessions.length) // 过滤无效索引
+      .sort((a, b) => a - b) // 先对索引排序
+      .map((index) => allSessions[index]);
   }, [selectedDays, allSessions]);
 
   if (!isOpen) return null;
@@ -400,7 +405,7 @@ function SimpleExportView({ plan, sessions, profile, showUserProfile }: {
         <div className="space-y-3">
           {sessions.slice(0, 4).map((session, index) => (
             <div
-              key={session.dayNumber}
+              key={`${session.dayNumber}-${index}`}
               className={`border-2 rounded-lg p-3 ${
                 index < 2 ? 'border-blue-200 bg-blue-50' : 'border-purple-200 bg-purple-50'
               }`}
@@ -551,7 +556,7 @@ function DetailedExportView({ plan, sessions, profile, showUserProfile }: {
       <div className="px-4 py-3 space-y-4">
         {sessions.map((session, index) => (
           <div
-            key={session.dayNumber}
+            key={`${session.dayNumber}-${index}`}
             className={`border-2 rounded-lg overflow-hidden ${
               index % 2 === 0 ? 'border-blue-200' : 'border-purple-200'
             }`}
