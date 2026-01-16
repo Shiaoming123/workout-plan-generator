@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { WorkoutSession } from '../../types';
 import ExerciseCard from './ExerciseCard';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 interface DayCardProps {
   session: WorkoutSession;
@@ -8,6 +10,7 @@ interface DayCardProps {
 
 export default function DayCard({ session }: DayCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   // 统计各阶段动作数量
   const phaseStats = {
@@ -31,8 +34,20 @@ export default function DayCard({ session }: DayCardProps) {
   ];
   const dayColorClass = dayColors[(session.dayNumber - 1) % dayColors.length];
 
+  // 悬浮效果配置
+  const hoverProps = prefersReducedMotion
+    ? {}
+    : {
+        whileHover: { scale: 1.01, y: -2 },
+        whileTap: { scale: 0.99 },
+        transition: { duration: 0.2 }
+      };
+
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300 border-l-4 ${dayColorClass}`}>
+    <motion.div
+      className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover hover:border-gray-300 border-l-4 ${dayColorClass}`}
+      {...hoverProps}
+    >
       {/* 卡片头部 - 可点击 */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -79,66 +94,76 @@ export default function DayCard({ session }: DayCardProps) {
         </svg>
       </button>
 
-      {/* 卡片内容 - 条件渲染 */}
-      {expanded && (
-        <div className="px-5 pb-5 border-t border-gray-100">
-          {/* 四个阶段横向排列 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-            {/* 热身 */}
-            {phaseStats.warmup > 0 && (
-              <PhaseSection
-                title="热身"
-                icon="🔥"
-                color="warmup"
-                sets={session.phases.warmup}
-              />
-            )}
+      {/* 卡片内容 - 带动画 */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
+            animate={prefersReducedMotion ? {} : { height: 'auto', opacity: 1 }}
+            exit={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 border-t border-gray-100">
+              {/* 四个阶段横向排列 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                {/* 热身 */}
+                {phaseStats.warmup > 0 && (
+                  <PhaseSection
+                    title="热身"
+                    icon="🔥"
+                    color="warmup"
+                    sets={session.phases.warmup}
+                  />
+                )}
 
-            {/* 主训练 */}
-            {phaseStats.main > 0 && (
-              <PhaseSection
-                title="主训练"
-                icon="💪"
-                color="main"
-                sets={session.phases.main}
-              />
-            )}
+                {/* 主训练 */}
+                {phaseStats.main > 0 && (
+                  <PhaseSection
+                    title="主训练"
+                    icon="💪"
+                    color="main"
+                    sets={session.phases.main}
+                  />
+                )}
 
-            {/* 辅助训练 */}
-            {phaseStats.accessory > 0 && (
-              <PhaseSection
-                title="辅助训练"
-                icon="⚡"
-                color="accessory"
-                sets={session.phases.accessory}
-              />
-            )}
+                {/* 辅助训练 */}
+                {phaseStats.accessory > 0 && (
+                  <PhaseSection
+                    title="辅助训练"
+                    icon="⚡"
+                    color="accessory"
+                    sets={session.phases.accessory}
+                  />
+                )}
 
-            {/* 放松拉伸 */}
-            {phaseStats.cooldown > 0 && (
-              <PhaseSection
-                title="放松拉伸"
-                icon="🧘"
-                color="cooldown"
-                sets={session.phases.cooldown}
-              />
-            )}
-          </div>
-
-          {/* 备注（如有）*/}
-          {session.notes && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-600 flex-shrink-0">💡</span>
-                <p className="text-sm text-blue-900 leading-relaxed">
-                  {session.notes}
-                </p>
+                {/* 放松拉伸 */}
+                {phaseStats.cooldown > 0 && (
+                  <PhaseSection
+                    title="放松拉伸"
+                    icon="🧘"
+                    color="cooldown"
+                    sets={session.phases.cooldown}
+                  />
+                )}
               </div>
+
+              {/* 备注（如有）*/}
+              {session.notes && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-blue-600 flex-shrink-0">💡</span>
+                    <p className="text-sm text-blue-900 leading-relaxed">
+                      {session.notes}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

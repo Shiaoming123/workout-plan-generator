@@ -1,11 +1,15 @@
 import { WorkoutSet } from '../../types';
 import { getExerciseById } from '../../lib/planGenerator';
+import { motion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 interface ExerciseCardProps {
   set: WorkoutSet;
 }
 
 export default function ExerciseCard({ set }: ExerciseCardProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   // 优先使用 set 中的动作名称（AI 生成时包含），否则从数据库查找
   let name = set.name;
   let nameZh = set.nameZh;
@@ -24,8 +28,23 @@ export default function ExerciseCard({ set }: ExerciseCardProps) {
     return null;
   }
 
+  // 悬浮高亮效果
+  const hoverProps = prefersReducedMotion
+    ? {}
+    : {
+        whileHover: {
+          scale: 1.02,
+          backgroundColor: 'rgba(156, 163, 175, 0.2)', // gray-400 with opacity
+          borderColor: 'rgba(209, 213, 219, 1)', // gray-300
+        },
+        transition: { duration: 0.15 }
+      };
+
   return (
-    <div className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150">
+    <motion.div
+      className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150"
+      {...hoverProps}
+    >
       {/* 动作名称 */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
@@ -101,7 +120,7 @@ export default function ExerciseCard({ set }: ExerciseCardProps) {
           </p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

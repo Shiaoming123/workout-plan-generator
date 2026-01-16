@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { WeekPlan } from '../../types';
 import DayCard from './DayCard';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 interface WeekCardProps {
   week: WeekPlan;
   showExpanded?: boolean;
+  index?: number; // 用于错峰动画
 }
 
-export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
+export default function WeekCard({ week, showExpanded = true, index = 0 }: WeekCardProps) {
   const [expanded, setExpanded] = useState(showExpanded);
+  const prefersReducedMotion = useReducedMotion();
 
   // 🎨 根据周数生成不同颜色（循环使用）
   const colorSchemes = [
@@ -23,8 +27,23 @@ export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
   const colorIndex = (week.weekNumber - 1) % colorSchemes.length;
   const colors = colorSchemes[colorIndex];
 
+  // 进入动画（错峰效果）
+  const animationProps = prefersReducedMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: {
+          duration: 0.5,
+          delay: index * 0.1 // 错峰延迟
+        }
+      };
+
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden border-l-4 ${colors.border}`}>
+    <motion.div
+      className={`bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden border-l-4 ${colors.border}`}
+      {...animationProps}
+    >
       {/* 周卡片头部 */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -65,29 +84,39 @@ export default function WeekCard({ week, showExpanded = true }: WeekCardProps) {
         </svg>
       </button>
 
-      {/* 周卡片内容 */}
-      {expanded && (
-        <div className="p-6 space-y-4">
-          {/* 周说明（如有）*/}
-          {week.notes && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <div className="flex items-start space-x-2">
-                <span className="text-blue-600 text-lg flex-shrink-0">ℹ️</span>
-                <p className="text-sm text-blue-900 leading-relaxed">
-                  {week.notes}
-                </p>
+      {/* 周卡片内容 - 带动画 */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
+            animate={prefersReducedMotion ? {} : { height: 'auto', opacity: 1 }}
+            exit={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="p-6 space-y-4">
+              {/* 周说明（如有）*/}
+              {week.notes && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-blue-600 text-lg flex-shrink-0">ℹ️</span>
+                    <p className="text-sm text-blue-900 leading-relaxed">
+                      {week.notes}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 日训练卡片 - 纵向堆叠 */}
+              <div className="space-y-4">
+                {week.sessions.map((session) => (
+                  <DayCard key={session.dayNumber} session={session} />
+                ))}
               </div>
             </div>
-          )}
-
-          {/* 日训练卡片 - 纵向堆叠 */}
-          <div className="space-y-4">
-            {week.sessions.map((session) => (
-              <DayCard key={session.dayNumber} session={session} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
