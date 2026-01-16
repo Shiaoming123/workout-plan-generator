@@ -64,13 +64,20 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const validationErrors = validateProfile(profile);
+
+    // ✅ 如果在自定义模式下，确保使用自定义时长
+    let finalProfile = { ...profile };
+    if (customTimeMode && profile.customSessionMinutes) {
+      finalProfile = { ...finalProfile, sessionMinutes: profile.customSessionMinutes };
+    }
+
+    const validationErrors = validateProfile(finalProfile);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
     }
     setErrors([]);
-    onGenerate(profile);
+    onGenerate(finalProfile);
   };
 
   const validateProfile = (p: UserProfile): string[] => {
@@ -477,7 +484,10 @@ export default function InputForm({ onGenerate }: InputFormProps) {
               <button
                 key={n}
                 type="button"
-                onClick={() => updateField('sessionMinutes', n)}
+                onClick={() => {
+                  updateField('sessionMinutes', n);
+                  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
+                }}
                 className={`py-2 px-3 rounded-lg border-2 transition-all font-medium ${
                   profile.sessionMinutes === n
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -514,7 +524,9 @@ export default function InputForm({ onGenerate }: InputFormProps) {
                 type="button"
                 onClick={() => {
                   setCustomTimeMode(false);
-                  updateField('sessionMinutes', profile.customSessionMinutes || 60);
+                  const customValue = profile.customSessionMinutes || 60;
+                  updateField('sessionMinutes', customValue);
+                  updateField('customSessionMinutes', undefined); // ✅ 清除自定义时长
                 }}
                 className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 font-medium transition-all"
               >
