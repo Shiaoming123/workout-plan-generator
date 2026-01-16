@@ -7,8 +7,8 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col relative">
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
@@ -20,24 +20,24 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
         </button>
 
         {/* 可滚动内容区域 */}
-        <div className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-8 pt-6 sm:pt-8 pb-4">
           {/* 成功提示 */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-4 animate-bounce">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-full mb-3 sm:mb-4 animate-bounce">
+              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
               训练计划生成！✅
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               您的专属健身计划已经准备好啦！💪
             </p>
           </div>
 
           {/* 感谢文案 */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 mb-6 border-2 border-purple-200">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-purple-200">
             <div className="text-center space-y-2">
               <p className="text-lg font-semibold text-gray-800">
                 🎉 感谢使用 Workout Plan Generator！
@@ -55,15 +55,15 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
           </div>
 
           {/* 收款码 */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {/* 支付宝 */}
-            <div className="bg-blue-50 rounded-2xl p-5 border-2 border-blue-200">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-2">💰</div>
-                <h3 className="font-bold text-gray-800 text-lg">支付宝</h3>
+            <div className="bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 border-2 border-blue-200">
+              <div className="text-center mb-3 sm:mb-4">
+                <div className="text-3xl sm:text-4xl mb-2">💰</div>
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg">支付宝</h3>
                 <p className="text-xs text-gray-600 mt-1">扫一扫请喝奶茶 🥤</p>
               </div>
-              <div className="bg-white rounded-xl p-3 shadow-inner flex items-center justify-center">
+              <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-inner flex items-center justify-center">
                 <img
                   src="/images/alipay-qr.jpg"
                   alt="支付宝收款码"
@@ -82,13 +82,13 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
             </div>
 
             {/* 微信 */}
-            <div className="bg-green-50 rounded-2xl p-5 border-2 border-green-200">
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-2">💚</div>
-                <h3 className="font-bold text-gray-800 text-lg">微信支付</h3>
+            <div className="bg-green-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 border-2 border-green-200">
+              <div className="text-center mb-3 sm:mb-4">
+                <div className="text-3xl sm:text-4xl mb-2">💚</div>
+                <h3 className="font-bold text-gray-800 text-base sm:text-lg">微信支付</h3>
                 <p className="text-xs text-gray-600 mt-1">扫一扫请喝奶茶 🧋</p>
               </div>
-              <div className="bg-white rounded-xl p-3 shadow-inner flex items-center justify-center">
+              <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 shadow-inner flex items-center justify-center">
                 <img
                   src="/images/wechat-qr.jpg"
                   alt="微信收款码"
@@ -114,17 +114,17 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
         </div>
 
         {/* 固定底部按钮区域 */}
-        <div className="px-8 pb-8 pt-2 border-t border-gray-100 bg-white">
-          <div className="flex gap-3">
+        <div className="px-5 sm:px-8 pb-6 sm:pb-8 pt-2 border-t border-gray-100 bg-white">
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="flex-1 py-2.5 sm:py-3 px-4 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg sm:rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
             >
               开始训练 🏋️‍♂️
             </button>
             <button
               onClick={onClose}
-              className="py-3 px-6 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+              className="py-2.5 sm:py-3 px-4 sm:px-6 bg-gray-100 text-gray-700 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-200 transition-all text-sm sm:text-base"
             >
               稍后再说 👋
             </button>

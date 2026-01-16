@@ -51,16 +51,16 @@ export default function DayCard({ session }: DayCardProps) {
       {/* 卡片头部 - 可点击 */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+        className="w-full px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
       >
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {/* 标题 */}
-          <h4 className="font-semibold text-gray-900 text-lg mb-1">
+          <h4 className="font-semibold text-gray-900 text-base sm:text-lg mb-1">
             {session.dayName}
           </h4>
 
           {/* 副标题信息 */}
-          <div className="flex items-center space-x-3 text-sm text-gray-600">
+          <div className="flex items-center flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
             <span className="flex items-center space-x-1">
               <span>🎯</span>
               <span>{session.focus}</span>

@@ -58,18 +58,18 @@ export default function UserProfileCard({ profile, onRegenerate }: UserProfileCa
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 shadow-card p-6">
+    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 shadow-card p-4 sm:p-6">
       {/* 标题栏 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl">
+            <svg className="w-5 h-5 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">个人信息与目标</h3>
-            <p className="text-sm text-gray-600">训练参数配置</p>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">个人信息与目标</h3>
+            <p className="text-xs sm:text-sm text-gray-600">训练参数配置</p>
           </div>
         </div>
 
@@ -77,18 +77,18 @@ export default function UserProfileCard({ profile, onRegenerate }: UserProfileCa
         {onRegenerate && (
           <button
             onClick={onRegenerate}
-            className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-200 hover:border-blue-300 rounded-lg transition-all font-medium shadow-sm hover:shadow"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-200 hover:border-blue-300 rounded-lg transition-all text-xs sm:text-sm font-medium shadow-sm hover:shadow"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span>重新生成</span>
+            <span className="hidden xs:inline">重新生成</span>
           </button>
         )}
       </div>
 
       {/* 基本信息网格 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
         {/* 基本信息 */}
         <InfoItem label="性别" value={profile.gender === 'male' ? '男' : profile.gender === 'female' ? '女' : '其他'} icon="👤" />
         <InfoItem label="年龄" value={`${profile.age}岁`} icon="🎂" />
@@ -180,10 +180,10 @@ function InfoItem({
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center p-3 rounded-lg border ${colorClasses[color]}`}>
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-[10px] text-gray-600 uppercase tracking-wide mb-0.5">{label}</div>
-      <div className="font-semibold text-sm text-center leading-tight">{value}</div>
+    <div className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border ${colorClasses[color]}`}>
+      <div className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{icon}</div>
+      <div className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-wide mb-0.5">{label}</div>
+      <div className="font-semibold text-xs sm:text-sm text-center leading-tight">{value}</div>
     </div>
   );
 }

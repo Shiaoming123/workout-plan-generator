@@ -112,7 +112,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-lg shadow-md p-6 print:hidden"
+      className="bg-white rounded-lg shadow-md p-4 sm:p-6 print:hidden"
     >
       <h2 className="text-2xl font-bold mb-6 text-gray-800">个人信息与目标</h2>
 
@@ -305,7 +305,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 基本信息 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
           <label className="block font-semibold mb-2 text-gray-700">性别</label>
           <select
@@ -400,7 +400,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         <label className="block font-semibold mb-2 text-gray-700">
           每周训练天数 <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-7 gap-2 mb-3">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 mb-3">
           {[1, 2, 3, 4, 5, 6, 7].map((n) => (
             <button
               key={n}
@@ -426,7 +426,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
             <p className="text-sm text-gray-600 mb-3">
               选择您希望在每周的哪几天训练（不选则自动安排）
             </p>
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
               {[
                 { value: 'monday', label: '周一', short: '一' },
                 { value: 'tuesday', label: '周二', short: '二' },
@@ -541,11 +541,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 训练场地与器械 */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <label className="block font-semibold mb-2 text-gray-700">
           训练场地 <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-3 sm:gap-4">
           {[
             { value: 'home', label: '家' },
             { value: 'gym', label: '健身房' },
@@ -570,7 +570,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         <label className="block font-semibold mb-2 text-gray-700">
           可用器械 (多选) <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           {[
             { value: 'none', label: '无器械' },
             { value: 'dumbbells', label: '哑铃' },
@@ -605,11 +605,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 身体限制 */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <label className="block font-semibold mb-2 text-gray-700">
           身体限制 (多选)
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           {[
             { value: 'knee_issue', label: '膝盖不适' },
             { value: 'back_issue', label: '腰背不适' },
@@ -641,7 +641,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 其他偏好 */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <label className="block font-semibold mb-2 text-gray-700">
           其他偏好 (可选)
         </label>
@@ -655,11 +655,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       {/* 计划周期 */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <label className="block font-semibold mb-2 text-gray-700">
           计划周期 <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
           {[
             { value: 'week', label: '周计划', desc: '1周（快速体验）' },
             { value: 'month', label: '月计划', desc: '4周（标准周期）' },
@@ -692,7 +692,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
         {/* 自定义周数输入 */}
         {profile.period === 'custom' && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <label className="block font-semibold mb-2 text-blue-900">
               输入训练周数
             </label>
@@ -703,7 +703,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
                 max="52"
                 value={profile.customWeeks || 8}
                 onChange={(e) => updateField('customWeeks', Math.min(52, Math.max(1, parseInt(e.target.value) || 1)))}
-                className="flex-1 max-w-xs px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                className="flex-1 max-w-xs px-3 py-2 sm:px-4 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
               />
               <span className="text-blue-700 font-medium">周</span>
             </div>

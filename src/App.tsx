@@ -209,12 +209,21 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-6 mt-12 print:hidden">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm">
+          <p className="text-sm mb-2">
             训练计划生成器 | Workout Plan Generator MVP
           </p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-gray-400 mb-3">
             仅供参考，训练前请咨询专业教练或医生
           </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-300">
+            <span>💬 技术交流 & 商务合作：</span>
+            <a
+              href="weixin://"
+              className="text-blue-400 hover:text-blue-300 font-medium"
+            >
+              Hen18175566208
+            </a>
+          </div>
         </div>
       </footer>
 
