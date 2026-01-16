@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { TrainingPlan, WorkoutSession, UserProfile } from '../types';
 import { toPng } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
+import { getGoalGradient } from '../constants/colors';
 
 interface ShareModalProps {
   plan: TrainingPlan;
@@ -407,18 +408,7 @@ function SimpleExportView({ plan, sessions, profile, showUserProfile, includeNut
   includeRecovery: boolean; // ✅ 新增
 }) {
   const { summary } = plan;
-
-  const goalGradients: Record<string, string> = {
-    fat_loss: 'from-orange-500 to-red-500',
-    muscle_gain: 'from-blue-500 to-purple-600',
-    fitness: 'from-cyan-500 to-blue-500',
-    rehab: 'from-green-500 to-cyan-500',
-    general: 'from-cyan-500 to-blue-500',
-  };
-
-  const gradientClass = summary.goal
-    ? goalGradients[summary.goal] || goalGradients.fitness
-    : goalGradients.fitness;
+  const gradientClass = getGoalGradient(summary.goal);
 
   return (
     <div className="flex flex-col bg-white" style={{ width: '600px', minHeight: '600px' }}>
@@ -638,18 +628,7 @@ function DetailedExportView({ plan, sessions, profile, showUserProfile, includeN
   includeRecovery: boolean; // ✅ 新增
 }) {
   const { summary } = plan;
-
-  const goalGradients: Record<string, string> = {
-    fat_loss: 'from-orange-500 to-red-500',
-    muscle_gain: 'from-blue-500 to-purple-600',
-    fitness: 'from-cyan-500 to-blue-500',
-    rehab: 'from-green-500 to-cyan-500',
-    general: 'from-cyan-500 to-blue-500',
-  };
-
-  const gradientClass = summary.goal
-    ? goalGradients[summary.goal] || goalGradients.fitness
-    : goalGradients.fitness;
+  const gradientClass = getGoalGradient(summary.goal);
 
   return (
     <div className="flex flex-col bg-white" style={{ width: '600px' }}>
@@ -873,7 +852,17 @@ function PhaseSection({ title, icon, color, sets }: {
   title: string;
   icon: string;
   color: string;
-  sets: any[];
+  sets: Array<{
+    exerciseId?: string;
+    name?: string;
+    nameZh?: string;
+    sets?: number;
+    reps?: number | string;
+    duration?: number;
+    restSec?: number;
+    rpe?: number;
+    notes?: string;
+  }>;
 }) {
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
     orange: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },

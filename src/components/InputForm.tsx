@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import type { CustomAPIConfig } from '../types/api';
-import { saveAPIConfig, loadAPIConfig, getDefaultAPIConfig } from '../lib/storageUtils';
+import { saveAPIConfig, loadAPIConfig, getDefaultAPIConfig, validateAPIConfig } from '../lib/storageUtils';
 
 interface InputFormProps {
   onGenerate: (profile: UserProfile) => void;
@@ -44,6 +44,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
   // ✅ 新增：API 配置状态
   const [showAPIConfig, setShowAPIConfig] = useState(false);
   const [apiConfig, setApiConfig] = useState<CustomAPIConfig>(getDefaultAPIConfig());
+  const [apiConfigError, setApiConfigError] = useState<string>('');
 
   // ✅ 新增：饮食信息状态
   const [showDietConfig, setShowDietConfig] = useState(false);
@@ -58,11 +59,23 @@ export default function InputForm({ onGenerate }: InputFormProps) {
   }, []);
 
   // ✅ API 配置变更处理
-  const handleAPIConfigChange = (field: keyof CustomAPIConfig, value: any) => {
+  const handleAPIConfigChange = (field: keyof CustomAPIConfig, value: CustomAPIConfig[keyof CustomAPIConfig]) => {
     const updated = { ...apiConfig, [field]: value };
     setApiConfig(updated);
+
+    // 验证配置（仅在启用时）
+    if (updated.enabled) {
+      const validation = validateAPIConfig(updated);
+      if (!validation.valid) {
+        setApiConfigError(validation.error || '');
+        return; // 验证失败时，不更新 profile 也不保存
+      }
+    }
+
+    // 验证通过或未启用时，清除错误并保存
+    setApiConfigError('');
     updateField('customAPI', updated);
-    saveAPIConfig(updated); // 自动保存到 LocalStorage
+    saveAPIConfig(updated);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -118,8 +131,8 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     value: NonNullable<UserProfile['dietProfile']>[K]
   ) => {
     setProfile((prev) => {
-      const currentDietProfile = prev.dietProfile;
-      const newDietProfile: any = {
+      const currentDietProfile = prev.dietProfile || {} as NonNullable<UserProfile['dietProfile']>;
+      const newDietProfile: NonNullable<UserProfile['dietProfile']> = {
         ...currentDietProfile,
         [field]: value,
       };
@@ -140,8 +153,8 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       const newArray = currentArray.includes(value)
         ? currentArray.filter((item) => item !== value)
         : [...currentArray, value];
-      const newDietProfile: any = {
-        ...prev.dietProfile,
+      const newDietProfile: NonNullable<UserProfile['dietProfile']> = {
+        ...(prev.dietProfile || {} as NonNullable<UserProfile['dietProfile']>),
         [field]: newArray,
       };
       return {
@@ -222,6 +235,13 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
         {showAPIConfig && (
           <div className="p-4 space-y-4 bg-white">
+            {/* 验证错误提示 */}
+            {apiConfigError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700 font-medium">⚠️ {apiConfigError}</p>
+              </div>
+            )}
+
             {/* 启用开关 */}
             <label className="flex items-center cursor-pointer">
               <input

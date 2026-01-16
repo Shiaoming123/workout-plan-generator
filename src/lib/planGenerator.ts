@@ -7,6 +7,8 @@ import {
   WorkoutSet,
   Exercise,
   GenerationMetadata,
+  GoalTemplate,
+  ExperienceModifier,
 } from '../types';
 import {
   allExercises,
@@ -287,8 +289,8 @@ function generateWarmup(
 function generateMainWork(
   profile: UserProfile,
   focus: string,
-  goalTemplate: any,
-  expModifier: any,
+  goalTemplate: GoalTemplate,
+  expModifier: ExperienceModifier,
   volumeMultiplier: number
 ): WorkoutSet[] {
   const { equipment, constraints } = profile;
@@ -389,7 +391,7 @@ function generateMainWork(
  */
 function generateAccessory(
   profile: UserProfile,
-  expModifier: any,
+  expModifier: ExperienceModifier,
   volumeMultiplier: number
 ): WorkoutSet[] {
   const { equipment, constraints } = profile;
@@ -439,7 +441,7 @@ function generateCooldown(
  */
 function createStrengthSet(
   exercise: Exercise,
-  expModifier: any,
+  expModifier: ExperienceModifier,
   volumeMultiplier: number,
   goal: string
 ): WorkoutSet {

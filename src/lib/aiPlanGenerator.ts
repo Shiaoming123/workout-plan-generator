@@ -392,11 +392,41 @@ export async function generatePlanByWeek(
       });
     });
 
-    // 等待所有周生成完成
-    const weeks = await Promise.all(weekPromises);
+    // ✅ 使用 allSettled 处理部分失败的情况
+    const results = await Promise.allSettled(weekPromises);
+
+    // 分离成功和失败的结果
+    const successfulWeeks: any[] = [];
+    const failedWeeks: number[] = [];
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successfulWeeks.push(result.value);
+      } else {
+        const weekNum = index + 1;
+        failedWeeks.push(weekNum);
+        console.error(`❌ 第 ${weekNum} 周生成失败:`, result.reason);
+      }
+    });
+
+    // 如果全部失败，降级到规则引擎
+    if (successfulWeeks.length === 0) {
+      console.error('❌ 所有周生成均失败，降级到规则引擎');
+      return generateRuleBasedPlan(profile, {
+        method: 'rule-based',
+        fallbackReason: '所有周生成均失败',
+        generatedAt: new Date().toISOString(),
+      });
+    }
+
+    // 如果部分失败，记录警告但继续使用成功的部分
+    if (failedWeeks.length > 0) {
+      console.warn(`⚠️  部分 ${failedWeeks.length} 周生成失败: 周 ${failedWeeks.join(', ')}`);
+      console.warn(`✅ 继续使用成功的 ${successfulWeeks.length} 周数据`);
+    }
 
     // 组装完整计划
-    const plan = assemblePlan(profile, weeks);
+    const plan = assemblePlan(profile, successfulWeeks);
     console.log('🎉 并行生成完成！');
     return plan;
   } catch (error: any) {
