@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { WorkoutSession } from '../../types';
 import ExerciseCard from './ExerciseCard';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { getAccessibleAnimation, transitions } from '../../utils/animationConfig';
 
 interface DayCardProps {
   session: WorkoutSession;
@@ -11,6 +11,16 @@ interface DayCardProps {
 export default function DayCard({ session }: DayCardProps) {
   const [expanded, setExpanded] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+
+  // 考虑用户偏好的展开动画
+  const expandAnimation = getAccessibleAnimation(
+    prefersReducedMotion,
+    {
+      initial: { height: 0, opacity: 0 },
+      animate: { height: 'auto', opacity: 1 },
+      exit: { height: 0, opacity: 0 }
+    }
+  );
 
   // 统计各阶段动作数量
   const phaseStats = {
@@ -98,15 +108,13 @@ export default function DayCard({ session }: DayCardProps) {
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
-            animate={prefersReducedMotion ? {} : { height: 'auto', opacity: 1 }}
-            exit={prefersReducedMotion ? {} : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            {...expandAnimation}
+            transition={transitions.slow}
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 border-t border-gray-100">
-              {/* 四个阶段横向排列 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+              {/* 四个阶段横向排列 - 使用 flex 确保等宽 */}
+              <div className="flex flex-col md:flex-row gap-4 pt-4">
                 {/* 热身 */}
                 {phaseStats.warmup > 0 && (
                   <PhaseSection
@@ -203,7 +211,7 @@ function PhaseSection({ title, icon, color, sets }: PhaseSectionProps) {
   const colors = colorClasses[color];
 
   return (
-    <div>
+    <div className="min-w-0 flex-1"> {/* ✅ 添加 min-w-0 和 flex-1 确保等宽 */}
       {/* 阶段标题 */}
       <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg mb-3 ${colors.bg} ${colors.border} border`}>
         <span>{icon}</span>
@@ -215,8 +223,8 @@ function PhaseSection({ title, icon, color, sets }: PhaseSectionProps) {
         </span>
       </div>
 
-      {/* 动作列表 */}
-      <div className="space-y-2">
+      {/* 动作列表 - 使用 grid 确保所有卡片等宽 */}
+      <div className="grid grid-cols-1 gap-2">
         {sets.map((set, index) => (
           <ExerciseCard key={index} set={set} />
         ))}

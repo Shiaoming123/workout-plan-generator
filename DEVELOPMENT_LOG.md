@@ -6,6 +6,112 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-17 21:00] - 第六轮优化：表单验证、骨架屏、动画和代码分割
+
+### Operation | 操作
+全面优化用户体验和性能：添加实时表单验证、骨架屏加载、动画配置优化、Vite 代码分割优化。
+
+### Files Modified | 修改的文件
+
+#### `src/components/InputForm.tsx`
+**实时表单验证**：
+- 添加字段级别的实时验证状态 `fieldErrors`
+- 实现 `validateField()` 函数，支持单个字段即时验证
+- 更新 `updateField()` 和 `toggleArrayItem()` 触发实时验证
+- 为年龄、身高、体重、器械、自定义时长/周数添加错误显示
+- 添加 ARIA 标签（`aria-invalid`, `aria-describedby`）增强无障碍性
+- 错误状态样式：红色边框 + 浅红色背景
+
+#### `src/components/Skeleton/` (新建目录)
+**骨架屏组件**：
+- `ExerciseSkeleton.tsx`：运动卡片骨架屏（模拟标题、标签、组数）
+- `DaySkeleton.tsx`：训练日骨架屏（包含多个运动卡片骨架屏）
+- `PlanSkeleton.tsx`：完整计划骨架屏（元数据 + 训练日列表 + 加载提示）
+- `index.ts`：统一导出接口
+
+#### `src/App.tsx`
+**集成骨架屏和懒加载**：
+- 用 `PlanSkeleton` 替换基础 loading spinner
+- 为 `DonationsModal` 和 `Tutorial` 添加动态导入（懒加载）
+- 使用 `Suspense` 包装懒加载组件
+- 减少初始加载体积
+
+#### `src/utils/animationConfig.ts` (新建文件)
+**动画配置统一管理**：
+- 定义基础动画变体（fadeIn, slideInRight, scale, expand）
+- 定义过渡配置预设（fast, normal, slow, bouncy, smooth）
+- 实现 `getAccessibleAnimation()` 支持用户减少动画偏好
+- 添加布局动画配置
+- 提供列表项动画变体（stagger children）
+
+#### `src/components/Toast/Toast.tsx`
+**使用共享动画配置**：
+- 导入并使用 `getAccessibleAnimation` 和 `transitions`
+- 替换硬编码的动画配置
+
+#### `src/components/cards/DayCard.tsx`
+**使用共享动画配置**：
+- 导入并使用 `getAccessibleAnimation` 和 `transitions`
+- 展开/收起动画使用统一的配置
+
+#### `vite.config.ts`
+**代码分割优化**：
+- 改进 `manualChunks` 配置，使用对象格式避免循环依赖
+- 为 chunk 文件添加哈希值（长期缓存）
+- 启用 CSS 代码分割
+- 使用 esbuild 压缩（比 terser 更快）
+- 生产环境移除 console 和 debugger
+
+### Results | 结果
+- ✅ 实时表单验证提升用户体验
+- ✅ 骨架屏改善感知加载速度
+- ✅ 动画配置统一，性能更好
+- ✅ 代码分割更细致，缓存效率提升
+- ✅ 初始加载体积减少（Tutorial 和 DonationsModal 懒加载）
+
+### Performance Metrics | 性能指标
+**构建产物**：
+```
+dist/index.html                    0.73 kB │ gzip:  0.42 kB
+dist/assets/index.css             67.68 kB │ gzip: 10.19 kB
+dist/assets/DonationsModal.js      5.21 kB │ gzip:  1.96 kB  (懒加载)
+dist/assets/export-vendor.js      29.78 kB │ gzip: 11.31 kB
+dist/assets/Tutorial.js          108.74 kB │ gzip: 35.11 kB  (懒加载)
+dist/assets/ui-vendor.js         120.99 kB │ gzip: 40.08 kB
+dist/assets/react-vendor.js      141.02 kB │ gzip: 45.33 kB
+dist/assets/index.js             348.13 kB │ gzip: 102.44 kB
+```
+
+**优化效果**：
+- 代码分割：7 个独立 chunk，提升缓存效率
+- 懒加载：Tutorial (108KB) 和 DonationsModal (5KB) 按需加载
+- CSS 分割：CSS 文件独立加载
+- 生产构建：移除 console 和 debugger
+
+### Testing | 测试
+- [x] 本地编译成功：`npm run build`
+- [x] TypeScript 类型检查通过
+- [x] 实时表单验证功能正常
+- [x] 骨架屏显示正常
+- [x] 动画无障碍支持正常
+- [x] 代码分割无循环依赖
+- [x] 懒加载组件正常工作
+
+### Notes | 备注
+**新增功能：**
+1. **实时表单验证**：用户输入时立即显示错误，改善交互体验
+2. **骨架屏**：加载时显示内容占位符，减少感知等待时间
+3. **动画优化**：统一配置，支持用户减少动画偏好
+4. **代码分割**：更细致的分块，提升缓存和加载性能
+
+**技术亮点：**
+- 字段级别验证：`validateField()` 函数支持多种字段类型
+- 无障碍支持：ARIA 标签和 `prefers-reduced-motion` 检测
+- 动态导入：`React.lazy()` 和 `Suspense` 实现组件懒加载
+- Vite 优化：esbuild 压缩、哈希命名、CSS 分割
+
+---
+
 ## [2026-01-17 19:30] - 第五轮优化：文档注释和键盘快捷键
 
 ### Operation | 操作

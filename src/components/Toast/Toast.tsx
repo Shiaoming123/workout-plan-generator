@@ -1,15 +1,26 @@
 import { useToast } from './index';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { getAccessibleAnimation, transitions } from '../../utils/animationConfig';
 
 /**
  * Toast 通知组件
  *
  * 显示所有激活的 Toast 通知，支持不同类型和自动消失
+ * 使用统一的动画配置，支持用户减少动画偏好
  */
 export default function Toast() {
   const { toasts, removeToast } = useToast();
   const prefersReducedMotion = useReducedMotion();
+
+  // 考虑用户偏好的滑入动画
+  const slideInAnimation = getAccessibleAnimation(
+    prefersReducedMotion,
+    {
+      initial: { opacity: 0, x: 100, scale: 0.9 },
+      animate: { opacity: 1, x: 0, scale: 1 },
+      exit: { opacity: 0, x: 100, scale: 0.9 }
+    }
+  );
 
   // 类型对应的样式配置
   const typeStyles = {
@@ -56,10 +67,8 @@ export default function Toast() {
           return (
             <motion.div
               key={toast.id}
-              initial={prefersReducedMotion ? {} : { opacity: 0, x: 100, scale: 0.9 }}
-              animate={prefersReducedMotion ? {} : { opacity: 1, x: 0, scale: 1 }}
-              exit={prefersReducedMotion ? {} : { opacity: 0, x: 100, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              {...slideInAnimation}
+              transition={transitions.normal}
               className={`${styles.bg} ${styles.border} ${styles.text} pointer-events-auto rounded-lg border shadow-lg p-4 min-w-[300px] max-w-md`}
             >
               <div className="flex items-start gap-3">

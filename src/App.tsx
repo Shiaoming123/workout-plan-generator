@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import Header from './components/Header';
 import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
-import DonationsModal from './components/DonationsModal';
-import Tutorial from './components/Tutorial';
 import Toast from './components/Toast/Toast';
 import { ToastProvider, useToast } from './components/Toast';
+import { PlanSkeleton } from './components/Skeleton';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
+
+// ✅ 动态导入大型组件，减少初始加载体积
+const DonationsModal = lazy(() => import('./components/DonationsModal'));
+const Tutorial = lazy(() => import('./components/Tutorial'));
 
 function AppContent() {
   const toast = useToast();
@@ -184,8 +187,10 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ✅ 新手引导 */}
-      <Tutorial run={runTutorial} onTourComplete={handleTourComplete} hasPlan={!!plan} />
+      {/* ✅ 新手引导（懒加载）*/}
+      <Suspense fallback={null}>
+        <Tutorial run={runTutorial} onTourComplete={handleTourComplete} hasPlan={!!plan} />
+      </Suspense>
 
       <Header onRestartTutorial={handleRestartTutorial} />
 
@@ -215,12 +220,7 @@ function AppContent() {
 
               {/* 非流式加载中（降级到规则引擎时）*/}
               {loading && !isStreaming && (
-                <div className="bg-white rounded-lg shadow-md p-12 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">正在生成训练计划...</p>
-                  </div>
-                </div>
+                <PlanSkeleton dayCount={3} exercisesPerDay={3} />
               )}
 
               {!loading && error && (
@@ -319,11 +319,13 @@ function AppContent() {
         </div>
       </footer>
 
-      {/* ✅ 感谢弹窗 */}
-      <DonationsModal
-        isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
-      />
+      {/* ✅ 感谢弹窗（懒加载）*/}
+      <Suspense fallback={null}>
+        <DonationsModal
+          isOpen={showDonationModal}
+          onClose={() => setShowDonationModal(false)}
+        />
+      </Suspense>
 
       {/* ✅ Toast 通知 */}
       <Toast />
