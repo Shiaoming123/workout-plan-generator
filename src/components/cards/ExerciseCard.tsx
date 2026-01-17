@@ -48,12 +48,12 @@ export default function ExerciseCard({ set }: ExerciseCardProps) {
       exerciseNameZh={nameZh}
     >
       <motion.div
-        className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150"
+        className="group bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 transition-all duration-150 w-full"
         {...hoverProps}
       >
         {/* 动作名称 */}
         <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h5 className="font-medium text-gray-900 leading-tight">
               {nameZh}
             </h5>

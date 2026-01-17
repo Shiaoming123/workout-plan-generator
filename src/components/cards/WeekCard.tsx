@@ -24,8 +24,9 @@ export default function WeekCard({ week, showExpanded = true, index = 0 }: WeekC
     { border: 'border-l-indigo-500', badge: 'bg-indigo-500', gradient: 'from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-150' },
   ];
 
-  const colorIndex = (week.weekNumber - 1) % colorSchemes.length;
-  const colors = colorSchemes[colorIndex];
+  // 安全地获取颜色方案（防止 weekNumber 为 undefined）
+  const colorIndex = week.weekNumber ? (week.weekNumber - 1) % colorSchemes.length : 0;
+  const colors = colorSchemes[colorIndex] || colorSchemes[0];
 
   // 进入动画（错峰效果）
   const animationProps = prefersReducedMotion
@@ -109,7 +110,7 @@ export default function WeekCard({ week, showExpanded = true, index = 0 }: WeekC
 
               {/* 日训练卡片 - 纵向堆叠 */}
               <div className="space-y-4">
-                {week.sessions.map((session) => (
+                {week.sessions && week.sessions.map((session) => (
                   <DayCard key={session.dayNumber} session={session} />
                 ))}
               </div>

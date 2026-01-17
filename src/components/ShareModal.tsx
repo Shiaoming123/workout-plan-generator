@@ -17,12 +17,16 @@ function getAllSessions(plan: TrainingPlan): WorkoutSession[] {
 
   if (plan.period === 'week' || plan.period === 'custom') {
     plan.weeks?.forEach((week) => {
-      sessions.push(...week.sessions);
+      if (week.sessions && Array.isArray(week.sessions)) {
+        sessions.push(...week.sessions);
+      }
     });
   } else if (plan.period === 'month' || plan.period === 'quarter') {
     plan.months?.forEach((month) => {
-      month.weeks.forEach((week) => {
-        sessions.push(...week.sessions);
+      month.weeks?.forEach((week) => {
+        if (week.sessions && Array.isArray(week.sessions)) {
+          sessions.push(...week.sessions);
+        }
       });
     });
   }
