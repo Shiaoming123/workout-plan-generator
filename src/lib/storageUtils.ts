@@ -90,7 +90,7 @@ export function validateAPIConfig(config: CustomAPIConfig): APIKeyValidation {
 }
 
 /**
- * 保存 API 配置到 LocalStorage（带验证）
+ * 保存 API 配置到 SessionStorage（浏览器关闭后自动清除，更安全）
  */
 export function saveAPIConfig(config: CustomAPIConfig): boolean {
   // 先验证配置
@@ -101,7 +101,7 @@ export function saveAPIConfig(config: CustomAPIConfig): boolean {
   }
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     return true;
   } catch (error) {
     console.error('保存 API 配置失败:', error);
@@ -109,7 +109,7 @@ export function saveAPIConfig(config: CustomAPIConfig): boolean {
     // 检查是否是配额超限错误
     if (error instanceof DOMException) {
       if (error.name === 'QuotaExceededError') {
-        console.error('LocalStorage 配额已满，请清理浏览器数据');
+        console.error('SessionStorage 配额已满，请清理浏览器数据');
       }
     }
 
@@ -118,11 +118,11 @@ export function saveAPIConfig(config: CustomAPIConfig): boolean {
 }
 
 /**
- * 从 LocalStorage 加载 API 配置
+ * 从 SessionStorage 加载 API 配置
  */
 export function loadAPIConfig(): CustomAPIConfig | null {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
     return JSON.parse(stored);
   } catch (error) {
@@ -135,7 +135,7 @@ export function loadAPIConfig(): CustomAPIConfig | null {
  * 清除保存的 API 配置
  */
 export function clearAPIConfig(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(STORAGE_KEY);
 }
 
 /**
