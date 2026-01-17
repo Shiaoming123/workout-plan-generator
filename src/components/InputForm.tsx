@@ -34,6 +34,7 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     experienceNotes: '',
     equipmentNotes: '',
     preferencesNotes: '',
+    includeNutritionAndRecovery: false, // ✅ 新增：默认关闭
   });
 
   // ✅ 新增：控制时长选择模式
@@ -789,9 +790,42 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
         {showDietConfig && (
           <div className="p-4 space-y-5 bg-white">
-            <p className="text-sm text-gray-600 italic">
-              💡 填写此部分可获取个性化的营养建议、餐食安排和食谱推荐（完全可选）
-            </p>
+            {/* ✅ 新增：总开关 */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg mb-4">
+              <div className="flex-1">
+                <h4 className="font-semibold text-green-900 mb-1">🍊 生成营养建议与恢复建议</h4>
+                <p className="text-sm text-green-700">
+                  {profile.dietProfile
+                    ? '已填写饮食信息，将生成个性化建议'
+                    : '未填写饮食信息，将根据训练情况生成通用建议'
+                  }
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateField('includeNutritionAndRecovery', !profile.includeNutritionAndRecovery)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                  profile.includeNutritionAndRecovery
+                    ? 'bg-green-500'
+                    : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block w-6 h-6 transform rounded-full bg-white transition-transform ${
+                    profile.includeNutritionAndRecovery ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 详细饮食信息表单 */}
+            <div className={`space-y-5 transition-all ${profile.includeNutritionAndRecovery ? '' : 'opacity-50 pointer-events-none'}`}>
+              <p className="text-sm text-gray-600 italic">
+                💡 {profile.includeNutritionAndRecovery
+                  ? '填写下方信息可获得更精准的建议（可选，不填写也会生成通用建议）'
+                  : '打开上方开关后，填写下方信息可获得更精准的建议'
+                }
+              </p>
 
             {/* 用餐习惯 */}
             <div className="space-y-3">
@@ -1058,7 +1092,8 @@ export default function InputForm({ onGenerate }: InputFormProps) {
               </button>
             </div>
           </div>
-        )}
+            </div>
+          )}
       </div>
 
       {/* 提交按钮 */}
@@ -1066,9 +1101,14 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         id="generate-button"
         type="submit"
         className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+        aria-label="生成训练计划"
+        aria-describedby="generate-help"
       >
         生成训练计划
       </button>
+      <span id="generate-help" className="sr-only">
+        根据您填写的信息生成个性化的训练计划
+      </span>
     </form>
   );
 }

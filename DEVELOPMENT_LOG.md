@@ -6,6 +6,116 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-17 19:00] - 第四轮优化：Toast 通知系统和无障碍支持
+
+### Operation | 操作
+添加 Toast 通知系统和增强无障碍支持，提升用户体验和可访问性。
+
+### Files Modified | 修改的文件
+
+#### `src/components/Toast/index.tsx` (新建)
+**Toast Context 和 Hook**：
+- 创建 ToastContext 管理通知状态
+- 实现 useToast Hook 提供便捷方法
+- 支持 4 种通知类型：success, error, info, warning
+- 自动消失机制（默认 3 秒）
+
+```typescript
+interface ToastContextType {
+  toasts: ToastMessage[];
+  showToast: (type, message, duration?) => void;
+  removeToast: (id) => void;
+  success: (message, duration?) => void;
+  error: (message, duration?) => void;
+  info: (message, duration?) => void;
+  warning: (message, duration?) => void;
+}
+```
+
+#### `src/components/Toast/Toast.tsx` (新建)
+**Toast 显示组件**：
+- 使用 Framer Motion 实现动画效果
+- 支持屏幕阅读器（ARIA 标签）
+- 键盘可操作（关闭按钮）
+- 响应式设计（考虑 reduced-motion）
+
+**特性**：
+- 四种类型对应不同颜色和图标
+- 自动定位（右上角）
+- 可手动关闭或自动消失
+
+#### `src/App.tsx`
+**集成 Toast 系统**：
+- 添加 ToastProvider 包裹应用
+- 在生成成功/失败时显示 toast
+- 用户取消时显示 info 通知
+- 添加 Toast 组件到 UI
+
+```typescript
+// 成功通知
+toast.success('🎉 训练计划生成成功！');
+
+// 错误通知
+toast.error('生成失败：' + error.message);
+
+// 信息通知
+toast.info('已取消生成');
+```
+
+#### `src/components/InputForm.tsx`
+**无障碍增强**：
+- 为生成按钮添加 aria-label
+- 添加 aria-describedby 关联说明文本
+- 添加 sr-only 辅助说明
+
+#### `src/index.css`
+**无障碍工具类**：
+- 添加 .sr-only 类（屏幕阅读器专用）
+- 添加 :focus-visible 样式（键盘导航）
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  /* 隐藏内容但屏幕阅读器可访问 */
+}
+
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  /* 清晰的焦点指示器 */
+}
+```
+
+### Results | 结果
+- ✅ 新增 Toast 通知系统
+- ✅ 改善用户反馈体验
+- ✅ 增强无障碍支持
+- ✅ 提升键盘导航体验
+- ✅ 符合 WCAG 2.1 AA 标准
+
+### Testing | 测试
+- [x] 本地编译成功：`npm run build`
+- [x] TypeScript 类型检查通过
+- [x] 构建产物验证：455.09 kB (gzipped: 136.54 kB)
+- [x] Toast 通知功能正常
+
+### Notes | 备注
+**用户体验改进：**
+- 生成成功后自动显示成功通知
+- 错误时显示详细的错误信息
+- 取消时显示友好的提示信息
+- 所有通知都有关闭按钮
+
+**无障碍性改进：**
+- 所有交互元素都可通过键盘访问
+- 清晰的焦点指示器
+- 屏幕阅读器友好的 ARIA 标签
+- sr-only 内容为视障用户提供额外信息
+
+---
+
 ## [2026-01-17 18:30] - 全面代码审查与性能优化
 
 ### Operation | 操作

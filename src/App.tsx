@@ -6,10 +6,13 @@ import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
 import DonationsModal from './components/DonationsModal';
 import Tutorial from './components/Tutorial';
+import Toast from './components/Toast/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
-export default function App() {
+function AppContent() {
+  const toast = useToast();
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,16 +83,19 @@ export default function App() {
       setPlan(newPlan);
       setProgress(null); // 完成后清空进度
       setShowDonationModal(true); // ✅ 显示感谢弹窗
+      toast.success('🎉 训练计划生成成功！');
     } catch (error: any) {
       console.error('生成计划失败:', error);
 
       // ✅ 检查是否是用户主动中断
       if (error.name === 'AbortError' || error.message === '用户取消了生成') {
         setError(null); // 清除错误，不显示为错误
+        toast.info('已取消生成');
         // 显示友好提示
         setStreamContent('✅ 已取消生成\n\n您可以重新填写表单并生成新的计划。');
       } else {
         setError(error.message || '生成计划失败，请稍后重试');
+        toast.error('生成失败：' + (error.message || '请稍后重试'));
       }
     } finally {
       setLoading(false);
@@ -275,6 +281,20 @@ export default function App() {
         isOpen={showDonationModal}
         onClose={() => setShowDonationModal(false)}
       />
+
+      {/* ✅ Toast 通知 */}
+      <Toast />
     </div>
+  );
+}
+
+/**
+ * 主应用组件（带 Toast Provider）
+ */
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
