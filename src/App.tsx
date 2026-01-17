@@ -49,6 +49,49 @@ function AppContent() {
     }
   }, []);
 
+  // ✅ 键盘快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K: 清空表单（如果有计划）
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (plan) {
+          // 如果有计划，确认后清空
+          if (confirm('确定要清空当前计划并重新开始吗？')) {
+            setPlan(null);
+            setLastProfile(null);
+            toast.info('已清空，请重新填写表单');
+          }
+        }
+      }
+
+      // ESC: 关闭弹窗
+      if (e.key === 'Escape') {
+        if (showDonationModal) {
+          setShowDonationModal(false);
+        }
+        if (runTutorial) {
+          setRunTutorial(false);
+        }
+        if (error) {
+          setError(null);
+        }
+      }
+
+      // Ctrl/Cmd + Enter: 提交表单（如果焦点在表单中）
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const form = document.getElementById('generate-button')?.closest('form');
+        if (form && document.activeElement instanceof HTMLInputElement) {
+          e.preventDefault();
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [plan, showDonationModal, runTutorial, error, toast]);
+
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
     setIsStreaming(true);

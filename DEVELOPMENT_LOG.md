@@ -6,6 +6,60 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-17 19:30] - 第五轮优化：文档注释和键盘快捷键
+
+### Operation | 操作
+为关键函数添加详细的 JSDoc 注释，并添加常用操作的键盘快捷键支持，提升开发体验和用户操作效率。
+
+### Files Modified | 修改的文件
+
+#### `src/lib/planGenerator.ts`
+**JSDoc 文档注释**：
+- 为 `generateRuleBasedPlan()` 添加详细文档
+  - 说明函数用途（规则引擎 vs AI）
+  - 参数说明和使用示例
+- 为 `generateWorkoutSession()` 添加详细文档
+  - 说明 4 个训练阶段的生成
+  - 参数说明和返回值类型
+
+#### `src/App.tsx`
+**键盘快捷键支持**：
+- 添加全局键盘事件监听器
+- `ESC`：关闭所有弹窗和清除错误
+- `Ctrl/Cmd + K`：清空当前计划并重新开始（带确认）
+- `Ctrl/Cmd + Enter`：提交表单（如果焦点在输入框中）
+
+#### `src/components/Header.tsx`
+**快捷键提示**：
+- 在 Header 底部添加快捷键提示
+- 仅在桌面端显示（响应式设计）
+- 显示常用快捷键：ESC、⌘K
+
+### Results | 结果
+- ✅ 核心函数文档完善
+- ✅ 提升开发体验（IDE 提示更友好）
+- ✅ 键盘操作效率提升
+- ✅ 用户友好性增强
+
+### Testing | 测试
+- [x] 本地编译成功：`npm run build`
+- [x] TypeScript 类型检查通过
+- [x] 构建产物验证：455.89 kB (gzipped: 136.96 kB)
+- [x] 键盘快捷键功能正常
+
+### Notes | 备注
+**支持的快捷键：**
+1. **ESC**：关闭所有弹窗（感谢弹窗、引导、错误提示）
+2. **⌘K / Ctrl+K**：清空当前计划并重新开始（带确认对话框）
+3. **⌘Enter / Ctrl+Enter**：提交表单（如果焦点在表单输入框中）
+
+**文档改进：**
+- 为规则引擎核心函数添加了完整的 JSDoc 注释
+- 包含参数说明、返回值类型和使用示例
+- 提升 IDE 代码提示质量
+
+---
+
 ## [2026-01-17 19:00] - 第四轮优化：Toast 通知系统和无障碍支持
 
 ### Operation | 操作
