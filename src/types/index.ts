@@ -157,6 +157,9 @@ export interface UserProfile {
   preferencesNotes?: string; // 其他偏好说明
   customAPI?: CustomAPIConfig; // ✅ 新增：自定义 API 配置
 
+  // ✅ 新增：饮食和休息建议开关
+  includeNutritionAndRecovery?: boolean; // 是否生成营养建议和恢复建议
+
   // ✅ 新增：饮食情况（可选）
   dietProfile?: DietProfile;
 }
