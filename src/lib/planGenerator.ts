@@ -460,11 +460,20 @@ function createStrengthSet(
 
 /**
  * 随机选择动作（避免重复）
+ * 使用 Fisher-Yates 洗牌算法，时间复杂度 O(n)，无偏随机
  */
 function selectRandom<T>(array: T[], count: number): T[] {
   if (array.length === 0) return [];
-  const shuffled = [...array].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, array.length));
+
+  // 使用 Fisher-Yates 洗牌算法（无偏随机，O(n) 时间复杂度）
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    // 交换元素
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result.slice(0, Math.min(count, array.length));
 }
 
 /**

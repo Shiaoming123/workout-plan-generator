@@ -6,6 +6,99 @@ This file tracks all significant modifications to the workout-plan-generator cod
 
 ---
 
+## [2026-01-17 18:30] - 全面代码审查与性能优化
+
+### Operation | 操作
+对整个项目进行了全面的代码审查，识别并修复了性能瓶颈、安全漏洞和代码质量问题。
+
+**审查范围：**
+- 86 个 TypeScript 文件
+- 核心业务逻辑、UI 组件、类型安全、安全性
+- 生成详细优化计划（见 `/Users/wuling/.claude/plans/twinkling-knitting-frog.md`）
+
+### Files Modified | 修改的文件
+
+#### `src/lib/promptTemplates.ts`
+**优化 1：缓存标签映射对象**
+- **问题**：每次调用 `buildUserPrompt()` 都重新创建相同的标签对象（goalLabels, genderLabels 等），造成不必要的内存分配
+- **解决方案**：将所有标签对象提取到模块顶层作为常量（GOAL_LABELS, GENDER_LABELS 等）
+- **结果**：减少每次调用约 50+ 个对象创建，降低 GC 压力
+```typescript
+// 之前：每次调用都创建
+const goalLabels: Record<string, string> = { fat_loss: '减脂', ... };
+
+// 现在：模块级常量，复用
+const GOAL_LABELS: Record<string, string> = { fat_loss: '减脂', ... };
+```
+
+#### `src/lib/planGenerator.ts`
+**优化 2：Fisher-Yates 洗牌算法**
+- **问题**：使用 `sort(() => Math.random() - 0.5)` 进行随机选择，存在偏差且效率低（O(n log n)）
+- **解决方案**：实现 Fisher-Yates 洗牌算法（O(n)，无偏随机）
+- **结果**：算法复杂度降低，随机性更均匀
+```typescript
+// 之前：有偏随机，O(n log n)
+const shuffled = [...array].sort(() => Math.random() - 0.5);
+
+// 现在：无偏随机，O(n)
+for (let i = result.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [result[i], result[j]] = [result[j], result[i]];
+}
+```
+
+#### `src/components/DonationsModal.tsx`
+**优化 3：修复 XSS 漏洞**
+- **问题**：使用 `innerHTML` 插入内容，存在 XSS 风险（lines 77, 102）
+- **解决方案**：使用安全的 DOM 操作（createElement + textContent）
+- **结果**：消除 XSS 漏洞，提升安全性
+```typescript
+// 之前：XSS 风险
+parent.innerHTML = '<p class="text-xs...">收款码加载中...</p>';
+
+// 现在：安全的 DOM 操作
+const errorMsg = document.createElement('p');
+errorMsg.className = 'text-xs text-gray-500 text-center py-4 error-message';
+errorMsg.textContent = '收款码加载中...';
+parent.appendChild(errorMsg);
+```
+
+### Results | 结果
+- ✅ 性能优化：减少重复对象创建，降低 GC 压力
+- ✅ 算法优化：随机算法时间复杂度从 O(n log n) 降至 O(n)
+- ✅ 安全修复：消除 XSS 漏洞，使用安全的 DOM 操作
+- ✅ 代码质量：添加详细注释，提升可维护性
+
+### Testing | 测试
+- [x] 本地编译成功：`npm run build`
+- [x] TypeScript 类型检查通过
+- [x] 构建产物验证：451.90 kB (gzipped: 135.23 kB)
+
+### Notes | 备注
+**优化计划（未来工作）：**
+
+剩余优化项按优先级排序：
+
+**🔴 高优先级（立即实施）：**
+1. 改进 API Key 存储安全（localStorage → sessionStorage）
+2. 添加 API 重试机制（指数退避策略）
+3. 消除 `any` 类型使用（发现 16 处）
+4. 修复 setTimeout 内存泄漏
+
+**🟡 中优先级（第二周）：**
+5. 拆分 InputForm 组件（1109 行 → 多个小组件）
+6. 实现统一状态管理（Context API）
+
+**🟢 低优先级（第三周）：**
+7. 添加 Toast 通知系统
+8. 添加骨架屏加载
+9. 增强无障碍支持（ARIA 标签、键盘导航）
+10. 国际化基础架构
+
+**完整优化计划：** `/Users/wuling/.claude/plans/twinkling-knitting-frog.md`
+
+---
+
 ## [2026-01-17 00:05] - 根本性优化：集成精确运动名称到 AI 提示词
 
 ### Operation | 操作
