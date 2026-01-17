@@ -72,9 +72,13 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
-                    const parent = target.parentElement!;
-                    if (parent) {
-                      parent.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.error-message')) {
+                      // 使用安全的 DOM 操作替代 innerHTML
+                      const errorMsg = document.createElement('p');
+                      errorMsg.className = 'text-xs text-gray-500 text-center py-4 error-message';
+                      errorMsg.textContent = '收款码加载中...';
+                      parent.appendChild(errorMsg);
                     }
                   }}
                 />
@@ -97,9 +101,13 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
-                    const parent = target.parentElement!;
-                    if (parent) {
-                      parent.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">收款码加载中...</p>';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.error-message')) {
+                      // 使用安全的 DOM 操作替代 innerHTML
+                      const errorMsg = document.createElement('p');
+                      errorMsg.className = 'text-xs text-gray-500 text-center py-4 error-message';
+                      errorMsg.textContent = '收款码加载中...';
+                      parent.appendChild(errorMsg);
                     }
                   }}
                 />

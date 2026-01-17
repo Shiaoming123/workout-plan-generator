@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import Header from './components/Header';
 import InputForm from './components/InputForm';
 import PlanDisplay from './components/PlanDisplay';
 import StreamingDisplay from './components/StreamingDisplay';
 import UserProfileCard from './components/UserProfileCard';
-import DonationsModal from './components/DonationsModal';
-import Tutorial from './components/Tutorial';
+import Toast from './components/Toast/Toast';
+import { ToastProvider, useToast } from './components/Toast';
+import { PlanSkeleton } from './components/Skeleton';
 import { UserProfile, TrainingPlan } from './types';
 import { generateAIPlanStreaming } from './lib/aiPlanGenerator';
 
-export default function App() {
+// ✅ 动态导入大型组件，减少初始加载体积
+const DonationsModal = lazy(() => import('./components/DonationsModal'));
+const Tutorial = lazy(() => import('./components/Tutorial'));
+
+function AppContent() {
+  const toast = useToast();
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +52,49 @@ export default function App() {
     }
   }, []);
 
+  // ✅ 键盘快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K: 清空表单（如果有计划）
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (plan) {
+          // 如果有计划，确认后清空
+          if (confirm('确定要清空当前计划并重新开始吗？')) {
+            setPlan(null);
+            setLastProfile(null);
+            toast.info('已清空，请重新填写表单');
+          }
+        }
+      }
+
+      // ESC: 关闭弹窗
+      if (e.key === 'Escape') {
+        if (showDonationModal) {
+          setShowDonationModal(false);
+        }
+        if (runTutorial) {
+          setRunTutorial(false);
+        }
+        if (error) {
+          setError(null);
+        }
+      }
+
+      // Ctrl/Cmd + Enter: 提交表单（如果焦点在表单中）
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const form = document.getElementById('generate-button')?.closest('form');
+        if (form && document.activeElement instanceof HTMLInputElement) {
+          e.preventDefault();
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [plan, showDonationModal, runTutorial, error, toast]);
+
   const handleGenerate = async (profile: UserProfile) => {
     setLoading(true);
     setIsStreaming(true);
@@ -80,16 +129,19 @@ export default function App() {
       setPlan(newPlan);
       setProgress(null); // 完成后清空进度
       setShowDonationModal(true); // ✅ 显示感谢弹窗
+      toast.success('🎉 训练计划生成成功！');
     } catch (error: any) {
       console.error('生成计划失败:', error);
 
       // ✅ 检查是否是用户主动中断
       if (error.name === 'AbortError' || error.message === '用户取消了生成') {
         setError(null); // 清除错误，不显示为错误
+        toast.info('已取消生成');
         // 显示友好提示
         setStreamContent('✅ 已取消生成\n\n您可以重新填写表单并生成新的计划。');
       } else {
         setError(error.message || '生成计划失败，请稍后重试');
+        toast.error('生成失败：' + (error.message || '请稍后重试'));
       }
     } finally {
       setLoading(false);
@@ -135,8 +187,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ✅ 新手引导 */}
-      <Tutorial run={runTutorial} onTourComplete={handleTourComplete} hasPlan={!!plan} />
+      {/* ✅ 新手引导（懒加载）*/}
+      <Suspense fallback={null}>
+        <Tutorial run={runTutorial} onTourComplete={handleTourComplete} hasPlan={!!plan} />
+      </Suspense>
 
       <Header onRestartTutorial={handleRestartTutorial} />
 
@@ -166,12 +220,7 @@ export default function App() {
 
               {/* 非流式加载中（降级到规则引擎时）*/}
               {loading && !isStreaming && (
-                <div className="bg-white rounded-lg shadow-md p-12 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">正在生成训练计划...</p>
-                  </div>
-                </div>
+                <PlanSkeleton dayCount={3} exercisesPerDay={3} />
               )}
 
               {!loading && error && (
@@ -270,11 +319,27 @@ export default function App() {
         </div>
       </footer>
 
-      {/* ✅ 感谢弹窗 */}
-      <DonationsModal
-        isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
-      />
+      {/* ✅ 感谢弹窗（懒加载）*/}
+      <Suspense fallback={null}>
+        <DonationsModal
+          isOpen={showDonationModal}
+          onClose={() => setShowDonationModal(false)}
+        />
+      </Suspense>
+
+      {/* ✅ Toast 通知 */}
+      <Toast />
     </div>
+  );
+}
+
+/**
+ * 主应用组件（带 Toast Provider）
+ */
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }

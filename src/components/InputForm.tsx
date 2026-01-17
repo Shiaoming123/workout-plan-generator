@@ -34,11 +34,14 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     experienceNotes: '',
     equipmentNotes: '',
     preferencesNotes: '',
+    includeNutritionAndRecovery: false, // ✅ 新增：默认关闭
   });
 
   // ✅ 新增：控制时长选择模式
   const [customTimeMode, setCustomTimeMode] = useState(false);
 
+  // ✅ 新增：实时验证错误状态
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<string[]>([]);
 
   // ✅ 新增：API 配置状态
@@ -96,6 +99,50 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     onGenerate(finalProfile);
   };
 
+  /**
+   * 单个字段验证（实时验证）
+   */
+  const validateField = (field: keyof UserProfile, value: any): string | null => {
+    switch (field) {
+      case 'age':
+        if (typeof value === 'number' && (value < 10 || value > 100)) {
+          return '年龄应在10-100之间';
+        }
+        break;
+      case 'height':
+        if (typeof value === 'number' && (value < 100 || value > 250)) {
+          return '身高应在100-250cm之间';
+        }
+        break;
+      case 'weight':
+        if (typeof value === 'number' && (value < 30 || value > 300)) {
+          return '体重应在30-300kg之间';
+        }
+        break;
+      case 'equipment':
+        if (Array.isArray(value) && value.length === 0) {
+          return '请至少选择一种器械选项';
+        }
+        break;
+      case 'customSessionMinutes':
+        if (typeof value === 'number' && (value < 10 || value > 180)) {
+          return '时长应在10-180分钟之间';
+        }
+        break;
+      case 'customWeeks':
+        if (typeof value === 'number' && (value < 1 || value > 52)) {
+          return '周数应在1-52之间';
+        }
+        break;
+      default:
+        break;
+    }
+    return null;
+  };
+
+  /**
+   * 完整用户资料验证（提交时验证）
+   */
   const validateProfile = (p: UserProfile): string[] => {
     const errs: string[] = [];
     if (p.age < 10 || p.age > 100) errs.push('年龄应在10-100之间');
@@ -105,13 +152,31 @@ export default function InputForm({ onGenerate }: InputFormProps) {
     return errs;
   };
 
+  /**
+   * 更新字段值并触发实时验证
+   */
   const updateField = <K extends keyof UserProfile>(
     field: K,
     value: UserProfile[K]
   ) => {
+    // 更新字段值
     setProfile((prev) => ({ ...prev, [field]: value }));
+
+    // 执行实时验证
+    const error = validateField(field, value);
+    setFieldErrors((prev) => {
+      if (error) {
+        return { ...prev, [field]: error };
+      } else {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+    });
   };
 
+  /**
+   * 切换数组项（用于 equipment、constraints 等）
+   */
   const toggleArrayItem = <K extends keyof UserProfile>(
     field: K,
     value: string
@@ -121,7 +186,22 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       const newArray = currentArray.includes(value)
         ? currentArray.filter((item) => item !== value)
         : [...currentArray, value];
-      return { ...prev, [field]: newArray };
+      const updated = { ...prev, [field]: newArray };
+
+      // 执行实时验证（仅针对 equipment 字段）
+      if (field === 'equipment') {
+        const error = validateField(field, newArray);
+        setFieldErrors((prev) => {
+          if (error) {
+            return { ...prev, [field]: error };
+          } else {
+            const { [field]: _, ...rest } = prev;
+            return rest;
+          }
+        });
+      }
+
+      return updated;
     });
   };
 
@@ -383,39 +463,69 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         </div>
 
         <div>
-          <label className="block font-semibold mb-2 text-gray-700">
+          <label className="block font-semibold mb-2 text-gray-700" htmlFor="age-input">
             年龄 <span className="text-red-500">*</span>
           </label>
           <input
+            id="age-input"
             type="number"
             value={profile.age}
-            onChange={(e) => updateField('age', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => updateField('age', parseInt(e.target.value) || 0)}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              fieldErrors.age ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            }`}
+            aria-invalid={!!fieldErrors.age}
+            aria-describedby={fieldErrors.age ? 'age-error' : undefined}
           />
+          {fieldErrors.age && (
+            <p id="age-error" className="mt-1 text-sm text-red-600" role="alert">
+              {fieldErrors.age}
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="block font-semibold mb-2 text-gray-700">
+          <label className="block font-semibold mb-2 text-gray-700" htmlFor="height-input">
             身高 (cm) <span className="text-red-500">*</span>
           </label>
           <input
+            id="height-input"
             type="number"
             value={profile.height}
-            onChange={(e) => updateField('height', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => updateField('height', parseInt(e.target.value) || 0)}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              fieldErrors.height ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            }`}
+            aria-invalid={!!fieldErrors.height}
+            aria-describedby={fieldErrors.height ? 'height-error' : undefined}
           />
+          {fieldErrors.height && (
+            <p id="height-error" className="mt-1 text-sm text-red-600" role="alert">
+              {fieldErrors.height}
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="block font-semibold mb-2 text-gray-700">
+          <label className="block font-semibold mb-2 text-gray-700" htmlFor="weight-input">
             体重 (kg) <span className="text-red-500">*</span>
           </label>
           <input
+            id="weight-input"
             type="number"
             value={profile.weight}
-            onChange={(e) => updateField('weight', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => updateField('weight', parseInt(e.target.value) || 0)}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+              fieldErrors.weight ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            }`}
+            aria-invalid={!!fieldErrors.weight}
+            aria-describedby={fieldErrors.weight ? 'weight-error' : undefined}
           />
+          {fieldErrors.weight && (
+            <p id="weight-error" className="mt-1 text-sm text-red-600" role="alert">
+              {fieldErrors.weight}
+            </p>
+          )}
         </div>
       </div>
 
@@ -579,7 +689,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
                 max="180"
                 value={profile.customSessionMinutes || 60}
                 onChange={(e) => updateField('customSessionMinutes', parseInt(e.target.value) || 60)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  fieldErrors.customSessionMinutes ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                }`}
+                aria-invalid={!!fieldErrors.customSessionMinutes}
+                aria-describedby={fieldErrors.customSessionMinutes ? 'custom-time-error' : undefined}
               />
               <span className="py-2 text-gray-600">分钟</span>
               <button
@@ -595,6 +709,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
                 取消
               </button>
             </div>
+            {fieldErrors.customSessionMinutes && (
+              <p id="custom-time-error" className="text-sm text-red-600" role="alert">
+                {fieldErrors.customSessionMinutes}
+              </p>
+            )}
             <p className="text-xs text-gray-500">
               建议：15-30分钟（新手），30-60分钟（进阶），60-90分钟（高级）
             </p>
@@ -629,10 +748,10 @@ export default function InputForm({ onGenerate }: InputFormProps) {
       </div>
 
       <div className="mb-6">
-        <label className="block font-semibold mb-2 text-gray-700">
+        <label className="block font-semibold mb-2 text-gray-700" htmlFor="equipment-section">
           可用器械 (多选) <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div id="equipment-section" className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
           {[
             { value: 'none', label: '无器械' },
             { value: 'dumbbells', label: '哑铃' },
@@ -652,6 +771,11 @@ export default function InputForm({ onGenerate }: InputFormProps) {
             </label>
           ))}
         </div>
+        {fieldErrors.equipment && (
+          <p id="equipment-error" className="mt-2 text-sm text-red-600" role="alert">
+            {fieldErrors.equipment}
+          </p>
+        )}
         <div className="mt-2">
           <label className="block text-sm text-gray-600 mb-1">
             器械补充说明 (可选)
@@ -755,20 +879,30 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         {/* 自定义周数输入 */}
         {profile.period === 'custom' && (
           <div className="p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <label className="block font-semibold mb-2 text-blue-900">
+            <label className="block font-semibold mb-2 text-blue-900" htmlFor="custom-weeks-input">
               输入训练周数
             </label>
             <div className="flex gap-2 items-center">
               <input
+                id="custom-weeks-input"
                 type="number"
                 min="1"
                 max="52"
                 value={profile.customWeeks || 8}
-                onChange={(e) => updateField('customWeeks', Math.min(52, Math.max(1, parseInt(e.target.value) || 1)))}
-                className="flex-1 max-w-xs px-3 py-2 sm:px-4 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                onChange={(e) => updateField('customWeeks', parseInt(e.target.value) || 8)}
+                className={`flex-1 max-w-xs px-3 py-2 sm:px-4 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white ${
+                  fieldErrors.customWeeks ? 'border-red-500' : 'border-blue-300'
+                }`}
+                aria-invalid={!!fieldErrors.customWeeks}
+                aria-describedby={fieldErrors.customWeeks ? 'custom-weeks-error' : undefined}
               />
               <span className="text-blue-700 font-medium">周</span>
             </div>
+            {fieldErrors.customWeeks && (
+              <p id="custom-weeks-error" className="mt-2 text-sm text-red-600" role="alert">
+                {fieldErrors.customWeeks}
+              </p>
+            )}
             <p className="text-xs text-blue-700 mt-2">
               💡 建议：4-8周适合初学者，12-16周适合进阶训练
             </p>
@@ -789,9 +923,42 @@ export default function InputForm({ onGenerate }: InputFormProps) {
 
         {showDietConfig && (
           <div className="p-4 space-y-5 bg-white">
-            <p className="text-sm text-gray-600 italic">
-              💡 填写此部分可获取个性化的营养建议、餐食安排和食谱推荐（完全可选）
-            </p>
+            {/* ✅ 新增：总开关 */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-lg mb-4">
+              <div className="flex-1">
+                <h4 className="font-semibold text-green-900 mb-1">🍊 生成营养建议与恢复建议</h4>
+                <p className="text-sm text-green-700">
+                  {profile.dietProfile
+                    ? '已填写饮食信息，将生成个性化建议'
+                    : '未填写饮食信息，将根据训练情况生成通用建议'
+                  }
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateField('includeNutritionAndRecovery', !profile.includeNutritionAndRecovery)}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                  profile.includeNutritionAndRecovery
+                    ? 'bg-green-500'
+                    : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block w-6 h-6 transform rounded-full bg-white transition-transform ${
+                    profile.includeNutritionAndRecovery ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 详细饮食信息表单 */}
+            <div className={`space-y-5 transition-all ${profile.includeNutritionAndRecovery ? '' : 'opacity-50 pointer-events-none'}`}>
+              <p className="text-sm text-gray-600 italic">
+                💡 {profile.includeNutritionAndRecovery
+                  ? '填写下方信息可获得更精准的建议（可选，不填写也会生成通用建议）'
+                  : '打开上方开关后，填写下方信息可获得更精准的建议'
+                }
+              </p>
 
             {/* 用餐习惯 */}
             <div className="space-y-3">
@@ -1058,7 +1225,8 @@ export default function InputForm({ onGenerate }: InputFormProps) {
               </button>
             </div>
           </div>
-        )}
+            </div>
+          )}
       </div>
 
       {/* 提交按钮 */}
@@ -1066,9 +1234,14 @@ export default function InputForm({ onGenerate }: InputFormProps) {
         id="generate-button"
         type="submit"
         className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+        aria-label="生成训练计划"
+        aria-describedby="generate-help"
       >
         生成训练计划
       </button>
+      <span id="generate-help" className="sr-only">
+        根据您填写的信息生成个性化的训练计划
+      </span>
     </form>
   );
 }

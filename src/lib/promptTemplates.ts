@@ -1,6 +1,137 @@
 import type { UserProfile } from '../types';
 import { generateExerciseNamesForAI } from '../data/verifiedExerciseMappings';
 
+// ============ 常量标签映射（避免每次调用时重复创建） ============
+
+/** 目标标签 */
+const GOAL_LABELS: Record<string, string> = {
+  fat_loss: '减脂',
+  muscle_gain: '增肌',
+  fitness: '体能提升',
+  rehab: '康复训练',
+  general: '综合健康',
+};
+
+/** 性别标签 */
+const GENDER_LABELS: Record<string, string> = {
+  male: '男',
+  female: '女',
+  prefer_not_to_say: '不透露',
+  other: '其他',
+};
+
+/** 经验水平标签 */
+const EXPERIENCE_LABELS: Record<string, string> = {
+  beginner: '新手（0-1年）',
+  intermediate: '进阶（1-3年）',
+  advanced: '老手（3年以上）',
+};
+
+/** 训练场地标签 */
+const LOCATION_LABELS: Record<string, string> = {
+  home: '家庭训练',
+  gym: '健身房',
+  outdoor: '户外',
+};
+
+/** 器械标签 */
+const EQUIPMENT_LABELS: Record<string, string> = {
+  none: '无器械（徒手）',
+  dumbbells: '哑铃',
+  barbell: '杠铃',
+  kettlebell: '壶铃',
+  resistance_bands: '弹力带',
+  full_gym: '器械齐全',
+};
+
+/** 身体限制标签 */
+const CONSTRAINT_LABELS: Record<string, string> = {
+  knee_issue: '膝盖不适',
+  back_issue: '腰背不适',
+  shoulder_issue: '肩部不适',
+  postpartum: '产后恢复',
+  hypertension: '高血压',
+  other: '其他',
+};
+
+/** 用餐频率标签 */
+const MEAL_FREQUENCY_LABELS: Record<string, string> = {
+  '2meals': '2餐/天',
+  '3meals': '3餐/天',
+  '4meals': '4餐/天',
+  '5meals': '5餐/天',
+  '6meals': '6餐/天',
+  irregular: '不规律',
+};
+
+/** 饮食偏好标签 */
+const DIETARY_PREFERENCE_LABELS: Record<string, string> = {
+  omnivore: '杂食',
+  vegetarian: '素食',
+  vegan: '纯素',
+  pescatarian: '鱼素',
+  keto: '生酮饮食',
+  paleo: '原始人饮食',
+  other: '其他',
+};
+
+/** 食物过敏标签 */
+const FOOD_ALLERGY_LABELS: Record<string, string> = {
+  dairy: '乳制品',
+  gluten: '麸质',
+  nuts: '坚果',
+  eggs: '鸡蛋',
+  soy: '大豆',
+  shellfish: '海鲜',
+  other: '其他',
+};
+
+/** 烹饪能力标签 */
+const COOKING_ABILITY_LABELS: Record<string, string> = {
+  cannot_cook: '不会做饭',
+  basic: '基础（简单炒菜、煮蛋）',
+  intermediate: '进阶（多种烹饪方式）',
+  advanced: '精通（复杂菜谱）',
+};
+
+// ============ 单周计划专用标签（与主计划略有不同） ============
+
+/** 单周计划目标标签 */
+const SINGLE_WEEK_GOAL_LABELS: Record<string, string> = {
+  fat_loss: '减脂（Fat Loss）',
+  muscle_gain: '增肌（Muscle Gain）',
+  fitness: '综合体能提升（General Fitness）',
+  strength: '力量提升（Strength）',
+  endurance: '耐力提升（Endurance）',
+  rehabilitation: '康复训练（Rehabilitation）',
+};
+
+/** 单周计划经验标签 */
+const SINGLE_WEEK_EXPERIENCE_LABELS: Record<string, string> = {
+  beginner: '初学者（0-6个月）',
+  intermediate: '中级（6个月-2年）',
+  advanced: '高级（2年以上）',
+};
+
+/** 单周计划场地标签 */
+const SINGLE_WEEK_LOCATION_LABELS: Record<string, string> = {
+  gym: '健身房',
+  home: '家庭',
+  outdoor: '户外',
+};
+
+/** 单周计划器械标签 */
+const SINGLE_WEEK_EQUIPMENT_LABELS: Record<string, string> = {
+  bodyweight: '自重',
+  dumbbells: '哑铃',
+  barbell: '杠铃',
+  resistance_bands: '弹力带',
+  kettlebell: '壶铃',
+  pull_up_bar: '引体向上杆',
+  bench: '卧推凳',
+  yoga_mat: '瑜伽垫',
+};
+
 /**
  * 构建系统 Prompt - 定义 AI 的角色和任务
  */
@@ -204,44 +335,6 @@ ${exerciseNamesList}
  * 构建用户 Prompt - 整合所有用户输入
  */
 export function buildUserPrompt(profile: UserProfile): string {
-  const goalLabels: Record<string, string> = {
-    fat_loss: '减脂',
-    muscle_gain: '增肌',
-    fitness: '体能提升',
-    rehab: '康复训练',
-    general: '综合健康',
-  };
-
-  const experienceLabels: Record<string, string> = {
-    beginner: '新手（0-1年）',
-    intermediate: '进阶（1-3年）',
-    advanced: '老手（3年以上）',
-  };
-
-  const locationLabels: Record<string, string> = {
-    home: '家庭训练',
-    gym: '健身房',
-    outdoor: '户外',
-  };
-
-  const equipmentLabels: Record<string, string> = {
-    none: '无器械（徒手）',
-    dumbbells: '哑铃',
-    barbell: '杠铃',
-    kettlebell: '壶铃',
-    resistance_bands: '弹力带',
-    full_gym: '器械齐全',
-  };
-
-  const constraintLabels: Record<string, string> = {
-    knee_issue: '膝盖不适',
-    back_issue: '腰背不适',
-    shoulder_issue: '肩部不适',
-    postpartum: '产后恢复',
-    hypertension: '高血压',
-    other: '其他',
-  };
-
   const periodLabels: Record<string, { desc: string; details: string }> = {
     week: {
       desc: '1周计划',
@@ -274,23 +367,23 @@ export function buildUserPrompt(profile: UserProfile): string {
 - **体重**：${profile.weight} kg
 
 ## 🎯 训练目标
-- **主要目标**：${goalLabels[profile.goal]}${profile.goalNotes ? `\n- **目标补充说明**：${profile.goalNotes}` : ''}
+- **主要目标**：${GOAL_LABELS[profile.goal]}${profile.goalNotes ? `\n- **目标补充说明**：${profile.goalNotes}` : ''}
 
 ## 💪 训练经验
-- **经验水平**：${experienceLabels[profile.experience]}${profile.experienceNotes ? `\n- **经验补充说明**：${profile.experienceNotes}` : ''}
+- **经验水平**：${EXPERIENCE_LABELS[profile.experience]}${profile.experienceNotes ? `\n- **经验补充说明**：${profile.experienceNotes}` : ''}
 
 ## 📅 训练安排
 - **每周训练天数**：${profile.daysPerWeek} 天
 - **每次训练时长**：${profile.sessionMinutes} 分钟
 
 ## 🏋️ 场地与器械
-- **训练场地**：${locationLabels[profile.location]}
-- **可用器械**：${profile.equipment.map((e) => equipmentLabels[e]).join('、')}${profile.equipmentNotes ? `\n- **器械补充说明**：${profile.equipmentNotes}` : ''}
+- **训练场地**：${LOCATION_LABELS[profile.location]}
+- **可用器械**：${profile.equipment.map((e) => EQUIPMENT_LABELS[e]).join('、')}${profile.equipmentNotes ? `\n- **器械补充说明**：${profile.equipmentNotes}` : ''}
 
 ## ⚠️ 身体限制与约束
 ${
   profile.constraints.length > 0
-    ? `- **限制项**：${profile.constraints.map((c) => constraintLabels[c]).join('、')}
+    ? `- **限制项**：${profile.constraints.map((c) => CONSTRAINT_LABELS[c]).join('、')}
 ${profile.constraintNotes ? `- **详细说明**：${profile.constraintNotes}` : ''}`
     : '- **无特殊限制**'
 }
@@ -298,7 +391,19 @@ ${profile.constraintNotes ? `- **详细说明**：${profile.constraintNotes}` : 
 ${profile.preferencesNotes ? `## 🎨 其他偏好\n${profile.preferencesNotes}\n` : ''}
 
 ${
-  profile.dietProfile ? buildDietProfileSection(profile.dietProfile) : ''
+  profile.includeNutritionAndRecovery
+    ? (profile.dietProfile
+        ? buildDietProfileSection(profile.dietProfile)
+        : '\n## 🍽️ 营养与恢复要求\n用户希望获取营养建议和恢复建议，但未提供详细饮食信息。请根据以下基本信息生成通用建议：\n' +
+          `- **训练目标**：${GOAL_LABELS[profile.goal] || profile.goal}\n` +
+          `- **性别**：${GENDER_LABELS[profile.gender] || profile.gender}\n` +
+          `- **年龄**：${profile.age}岁\n` +
+          `- **体重**：${profile.weight}kg\n` +
+          `- **训练频率**：每周${profile.daysPerWeek}天，每次${profile.sessionMinutes}分钟\n` +
+          `- **训练经验**：${EXPERIENCE_LABELS[profile.experience] || profile.experience}\n\n` +
+          '请基于以上信息生成适合的营养建议（热量、蛋白质、碳水、脂肪）和恢复建议（睡眠、休息日、恢复技巧）。'
+      )
+    : ''
 }
 ## 📋 计划结构要求
 ${periodLabels[profile.period].details}
@@ -335,66 +440,26 @@ export function buildSingleWeekUserPrompt(
   totalWeeks: number,
   previousWeekSummary?: string
 ): string {
-  const goalLabels: Record<string, string> = {
-    fat_loss: '减脂（Fat Loss）',
-    muscle_gain: '增肌（Muscle Gain）',
-    fitness: '综合体能提升（General Fitness）',
-    strength: '力量提升（Strength）',
-    endurance: '耐力提升（Endurance）',
-    rehabilitation: '康复训练（Rehabilitation）',
-  };
-
-  const experienceLabels: Record<string, string> = {
-    beginner: '初学者（0-6个月）',
-    intermediate: '中级（6个月-2年）',
-    advanced: '高级（2年以上）',
-  };
-
-  const locationLabels: Record<string, string> = {
-    gym: '健身房',
-    home: '家庭',
-    outdoor: '户外',
-  };
-
-  const equipmentLabels: Record<string, string> = {
-    bodyweight: '自重',
-    dumbbells: '哑铃',
-    barbell: '杠铃',
-    resistance_bands: '弹力带',
-    kettlebell: '壶铃',
-    pull_up_bar: '引体向上杆',
-    bench: '卧推凳',
-    yoga_mat: '瑜伽垫',
-  };
-
-  const constraintLabels: Record<string, string> = {
-    knee_issue: '膝盖问题',
-    back_issue: '腰背问题',
-    shoulder_issue: '肩部问题',
-    postpartum: '产后恢复',
-    hypertension: '高血压',
-  };
-
   return `# 用户资料
 
 ## 🎯 训练目标
-- **主要目标**：${goalLabels[profile.goal]}${profile.goalNotes ? `\n- **目标补充说明**：${profile.goalNotes}` : ''}
+- **主要目标**：${SINGLE_WEEK_GOAL_LABELS[profile.goal]}${profile.goalNotes ? `\n- **目标补充说明**：${profile.goalNotes}` : ''}
 
 ## 💪 训练经验
-- **经验水平**：${experienceLabels[profile.experience]}${profile.experienceNotes ? `\n- **经验补充说明**：${profile.experienceNotes}` : ''}
+- **经验水平**：${SINGLE_WEEK_EXPERIENCE_LABELS[profile.experience]}${profile.experienceNotes ? `\n- **经验补充说明**：${profile.experienceNotes}` : ''}
 
 ## 📅 训练安排
 - **每周训练天数**：${profile.daysPerWeek} 天
 - **每次训练时长**：${profile.sessionMinutes} 分钟
 
 ## 🏋️ 场地与器械
-- **训练场地**：${locationLabels[profile.location]}
-- **可用器械**：${profile.equipment.map((e) => equipmentLabels[e]).join('、')}${profile.equipmentNotes ? `\n- **器械补充说明**：${profile.equipmentNotes}` : ''}
+- **训练场地**：${SINGLE_WEEK_LOCATION_LABELS[profile.location]}
+- **可用器械**：${profile.equipment.map((e) => SINGLE_WEEK_EQUIPMENT_LABELS[e] || e).join('、')}${profile.equipmentNotes ? `\n- **器械补充说明**：${profile.equipmentNotes}` : ''}
 
 ## ⚠️ 身体限制与约束
 ${
   profile.constraints.length > 0
-    ? `- **限制项**：${profile.constraints.map((c) => constraintLabels[c]).join('、')}
+    ? `- **限制项**：${profile.constraints.map((c) => CONSTRAINT_LABELS[c]).join('、')}
 ${profile.constraintNotes ? `- **详细说明**：${profile.constraintNotes}` : ''}`
     : '- **无特殊限制**'
 }
@@ -477,51 +542,15 @@ function getWeekPhaseDescription(weekNumber: number, totalWeeks: number): string
  * 构建饮食资料部分的 Prompt
  */
 function buildDietProfileSection(dietProfile: NonNullable<UserProfile['dietProfile']>): string {
-  const mealFrequencyLabels: Record<string, string> = {
-    '2meals': '2餐/天',
-    '3meals': '3餐/天',
-    '4meals': '4餐/天',
-    '5meals': '5餐/天',
-    '6meals': '6餐/天',
-    'irregular': '不规律',
-  };
-
-  const dietaryPreferenceLabels: Record<string, string> = {
-    omnivore: '杂食',
-    vegetarian: '素食',
-    vegan: '纯素',
-    pescatarian: '鱼素',
-    keto: '生酮饮食',
-    paleo: '原始人饮食',
-    other: '其他',
-  };
-
-  const foodAllergyLabels: Record<string, string> = {
-    dairy: '乳制品',
-    gluten: '麸质',
-    nuts: '坚果',
-    eggs: '鸡蛋',
-    soy: '大豆',
-    shellfish: '海鲜',
-    other: '其他',
-  };
-
-  const cookingAbilityLabels: Record<string, string> = {
-    cannot_cook: '不会做饭',
-    basic: '基础（简单炒菜、煮蛋）',
-    intermediate: '进阶（多种烹饪方式）',
-    advanced: '精通（复杂菜谱）',
-  };
-
   let section = `## 🍽️ 饮食信息（用户已提供）
-- **每日用餐频率**：${mealFrequencyLabels[dietProfile.mealFrequency]}`;
+- **每日用餐频率**：${MEAL_FREQUENCY_LABELS[dietProfile.mealFrequency]}`;
 
   if (dietProfile.dietaryPreference) {
-    section += `\n- **饮食偏好**：${dietaryPreferenceLabels[dietProfile.dietaryPreference]}`;
+    section += `\n- **饮食偏好**：${DIETARY_PREFERENCE_LABELS[dietProfile.dietaryPreference]}`;
   }
 
   if (dietProfile.foodAllergies && dietProfile.foodAllergies.length > 0) {
-    section += `\n- **食物过敏/不耐受**：${dietProfile.foodAllergies.map((a) => foodAllergyLabels[a]).join('、')}`;
+    section += `\n- **食物过敏/不耐受**：${dietProfile.foodAllergies.map((a) => FOOD_ALLERGY_LABELS[a]).join('、')}`;
     if (dietProfile.allergyNotes) {
       section += `\n  - **详细说明**：${dietProfile.allergyNotes}`;
     }
@@ -539,7 +568,7 @@ function buildDietProfileSection(dietProfile: NonNullable<UserProfile['dietProfi
     section += `\n- **当前使用的补剂**：${dietProfile.supplementUsage}`;
   }
 
-  section += `\n- **烹饪能力**：${cookingAbilityLabels[dietProfile.cookingAbility]}`;
+  section += `\n- **烹饪能力**：${COOKING_ABILITY_LABELS[dietProfile.cookingAbility]}`;
 
   if (dietProfile.cookingTime) {
     section += `\n- **愿意花费的烹饪时间**：每餐约 ${dietProfile.cookingTime} 分钟`;

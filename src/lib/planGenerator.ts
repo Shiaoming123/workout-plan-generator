@@ -31,11 +31,22 @@ import {
 } from '../data/templates';
 
 /**
- * 规则引擎生成函数：基于模板和规则生成训练计划
+ * 使用规则引擎生成训练计划
  *
- * @param profile - 用户资料
- * @param metadata - 可选的元数据（用于降级场景）
- * @returns 完整的训练计划（包含元数据）
+ * 基于预定义模板和算法生成训练计划，不依赖 AI。
+ * 作为 AI 生成的备用方案，或用于快速生成。
+ *
+ * @param profile - 用户资料，包含目标、经验、场地、器械等信息
+ * @param metadata - 可选的生成元数据
+ * @returns 完整的训练计划
+ *
+ * @example
+ * ```ts
+ * const plan = generateRuleBasedPlan(userProfile, {
+ *   method: 'rule-based',
+ *   fallbackReason: 'API not configured'
+ * });
+ * ```
  */
 export function generateRuleBasedPlan(
   profile: UserProfile,
@@ -210,7 +221,19 @@ function generateWeekPlan(
 }
 
 /**
- * 生成单次训练
+ * 生成单次训练课程
+ *
+ * 根据用户资料生成包含 4 个阶段的完整训练课程：
+ * - 热身（warmup）
+ * - 主训练（main）
+ * - 辅助训练（accessory）
+ * - 放松拉伸（cooldown）
+ *
+ * @param profile - 用户资料
+ * @param dayNumber - 训练日编号（从 1 开始）
+ * @param focus - 训练重点（如"上肢力量 + 核心"）
+ * @param volumeMultiplier - 训练容量倍数（用于周期化）
+ * @returns 完整的训练课程对象
  */
 function generateWorkoutSession(
   profile: UserProfile,
@@ -460,11 +483,20 @@ function createStrengthSet(
 
 /**
  * 随机选择动作（避免重复）
+ * 使用 Fisher-Yates 洗牌算法，时间复杂度 O(n)，无偏随机
  */
 function selectRandom<T>(array: T[], count: number): T[] {
   if (array.length === 0) return [];
-  const shuffled = [...array].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, array.length));
+
+  // 使用 Fisher-Yates 洗牌算法（无偏随机，O(n) 时间复杂度）
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    // 交换元素
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result.slice(0, Math.min(count, array.length));
 }
 
 /**

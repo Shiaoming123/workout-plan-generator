@@ -91,7 +91,14 @@ export async function generateAIPlanStreaming(
     // 解析响应
     console.log('📝 开始解析 AI 响应...');
     console.log('原始内容长度:', result.content.length);
-    const parsed = parseAIResponse(result.content) as any;
+    const parsed = parseAIResponse(result.content);
+
+    // 使用类型守卫验证数据结构
+    if (!validateTrainingPlan(parsed)) {
+      console.error('❌ AI 响应验证失败', result.content);
+      throw new Error('AI 响应格式不正确，验证失败');
+    }
+
     console.log('✅ 解析成功，数据结构:', {
       period: parsed.period,
       hasWeeks: !!parsed.weeks,
@@ -99,7 +106,18 @@ export async function generateAIPlanStreaming(
       hasMonths: !!parsed.months,
       monthsLength: parsed.months?.length,
       hasSummary: !!parsed.summary,
+      hasNutritionAdvice: !!parsed.nutritionAdvice,
+      hasRecoveryAdvice: !!parsed.recoveryAdvice,
     });
+
+    // 调试：如果用户提供了饮食信息但没有生成营养建议，输出警告
+    if (profile.dietProfile && !parsed.nutritionAdvice) {
+      console.warn('⚠️ 用户提供了饮食信息，但 AI 未生成 nutritionAdvice');
+      console.warn('dietProfile:', profile.dietProfile);
+    }
+    if (profile.dietProfile && !parsed.recoveryAdvice) {
+      console.warn('⚠️ 用户提供了饮食信息，但 AI 未生成 recoveryAdvice');
+    }
 
     // 验证结构
     if (!validateTrainingPlan(parsed)) {
@@ -206,7 +224,14 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
     // 解析响应
     console.log('📝 开始解析 AI 响应...');
     console.log('原始内容长度:', result.content.length);
-    const parsed = parseAIResponse(result.content) as any;
+    const parsed = parseAIResponse(result.content);
+
+    // 使用类型守卫验证数据结构
+    if (!validateTrainingPlan(parsed)) {
+      console.error('❌ AI 响应验证失败', result.content);
+      throw new Error('AI 响应格式不正确，验证失败');
+    }
+
     console.log('✅ 解析成功，数据结构:', {
       period: parsed.period,
       hasWeeks: !!parsed.weeks,
@@ -214,7 +239,18 @@ export async function generateAIPlan(profile: UserProfile): Promise<TrainingPlan
       hasMonths: !!parsed.months,
       monthsLength: parsed.months?.length,
       hasSummary: !!parsed.summary,
+      hasNutritionAdvice: !!parsed.nutritionAdvice,
+      hasRecoveryAdvice: !!parsed.recoveryAdvice,
     });
+
+    // 调试：如果用户提供了饮食信息但没有生成营养建议，输出警告
+    if (profile.dietProfile && !parsed.nutritionAdvice) {
+      console.warn('⚠️ 用户提供了饮食信息，但 AI 未生成 nutritionAdvice');
+      console.warn('dietProfile:', profile.dietProfile);
+    }
+    if (profile.dietProfile && !parsed.recoveryAdvice) {
+      console.warn('⚠️ 用户提供了饮食信息，但 AI 未生成 recoveryAdvice');
+    }
 
     // 验证结构
     if (!validateTrainingPlan(parsed)) {

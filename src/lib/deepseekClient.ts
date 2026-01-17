@@ -8,6 +8,66 @@ import type {
 } from '../types/api';
 
 /**
+ * 带重试机制的 fetch 封装（指数退避策略）
+ *
+ * @param url - 请求 URL
+ * @param options - fetch 选项
+ * @param maxRetries - 最大重试次数（默认 3）
+ * @param baseDelay - 基础延迟时间（毫秒，默认 1000ms）
+ * @returns fetch Response
+ * @throws 如果所有重试都失败
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<Response> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // 如果响应成功，直接返回
+      if (response.ok) {
+        return response;
+      }
+
+      // 如果是 4xx 错误（客户端错误），不重试
+      if (response.status >= 400 && response.status < 500) {
+        return response;
+      }
+
+      // 如果是 5xx 错误（服务器错误）或网络问题，准备重试
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } catch (error) {
+      lastError = error as Error;
+
+      // 如果是最后一次尝试，不再重试
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // 计算指数退避延迟：1s, 2s, 4s, ...
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.warn(
+        `[API Retry] 第 ${attempt + 1}/${maxRetries + 1} 次请求失败，${delay}ms 后重试...`,
+        lastError.message
+      );
+
+      // 等待后重试
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  // 所有重试都失败
+  throw new Error(
+    `API 请求失败，已重试 ${maxRetries} 次。最后错误: ${lastError?.message || '未知错误'}`
+  );
+}
+
+/**
  * 解析 API 配置（优先使用自定义配置）
  */
 function resolveAPIConfig(customConfig?: CustomAPIConfig): ResolvedAPIConfig {
@@ -121,7 +181,7 @@ export async function callDeepSeekStreaming(
     stream: true, // ✅ 启用流式输出
   };
 
-  console.log('[LLM API Streaming] 发起流式请求...');
+  console.log('[LLM API Streaming] 发起流式请求（带重试机制，最多3次）...');
   console.log('[LLM API Streaming] ⏱️  超时机制: 120秒无数据则中断（持续接收数据时不超时）');
 
   // 在 try 块外声明，以便在 catch 块中访问
@@ -135,12 +195,17 @@ export async function callDeepSeekStreaming(
       'Authorization': `Bearer ${config.apiKey}`,
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
+    const response = await fetchWithRetry(
+      url,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      },
+      3, // 最多重试 3 次
+      1000 // 基础延迟 1 秒
+    );
 
     console.log(`[LLM API Streaming] 响应收到 (状态: ${response.status})`);
 
@@ -241,6 +306,11 @@ export async function callDeepSeekStreaming(
       duration,
     };
   } catch (error: any) {
+    // ✅ 确保清理 timeout
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+
     const duration = Date.now() - startTime;
     console.error(`[LLM API Streaming] 请求失败 (耗时: ${duration}ms)`);
     console.error('  - 错误:', error.message);
@@ -327,7 +397,7 @@ export async function callDeepSeek(
     stream: options?.stream ?? false,
   };
 
-  console.log('[LLM API] 发起请求:');
+  console.log('[LLM API] 发起请求（带重试机制，最多3次）:');
   console.log('  - URL:', url);
   console.log('  - Messages 数量:', messages.length);
   console.log('  - 总字符数:', JSON.stringify(messages).length);
@@ -339,12 +409,17 @@ export async function callDeepSeek(
       'Authorization': `Bearer ${config.apiKey}`,
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
+    const response = await fetchWithRetry(
+      url,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      },
+      3, // 最多重试 3 次
+      1000 // 基础延迟 1 秒
+    );
 
     const duration = Date.now() - startTime;
     console.log(`[LLM API] 响应收到 (耗时: ${duration}ms, 状态: ${response.status})`);
