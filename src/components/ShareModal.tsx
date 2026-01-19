@@ -696,7 +696,7 @@ function SimpleExportView({ plan, sessions, profile, showUserProfile, includeNut
       <div className="px-4 py-3 border-t-2 border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
           <div className="text-xs text-gray-600">
-            <div className="font-medium text-gray-900">Workout Plan Generator</div>
+            <div className="font-medium text-gray-900">健身计划大师 | Fitness Architect</div>
             <div className="mt-1">{new Date().toLocaleDateString('zh-CN')}</div>
           </div>
           <div className="text-xs text-gray-500">
@@ -925,7 +925,7 @@ function DetailedExportView({ plan, sessions, profile, showUserProfile, includeN
       <div className="px-4 py-3 border-t-2 border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
           <div className="text-xs text-gray-600">
-            <div className="font-medium text-gray-900">Workout Plan Generator</div>
+            <div className="font-medium text-gray-900">健身计划大师 | Fitness Architect</div>
             <div className="mt-1">{new Date().toLocaleDateString('zh-CN')}</div>
           </div>
           <div className="text-xs text-gray-500">

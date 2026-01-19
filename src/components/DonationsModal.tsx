@@ -40,7 +40,7 @@ export default function DonationsModal({ isOpen, onClose }: DonationsModalProps)
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-purple-200">
             <div className="text-center space-y-2">
               <p className="text-lg font-semibold text-gray-800">
-                🎉 感谢使用 Workout Plan Generator！
+                🎉 感谢使用健身计划大师！
               </p>
               <p className="text-gray-700">
                 如果这个计划对您有帮助，欢迎请我喝杯奶茶 ☕️~
