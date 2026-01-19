@@ -23,7 +23,7 @@ export default function Tutorial({ run, onTourComplete, hasPlan }: TutorialProps
           content: (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-blue-600 mb-3">
-                🏋️‍♂️ 欢迎使用训练计划生成器！
+                🏋️‍♂️ 欢迎使用健身计划大师！
               </h2>
               <p className="text-gray-700 mb-4">
                 这是一款基于 AI 的智能健身计划生成工具，<br/>
