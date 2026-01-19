@@ -3,6 +3,7 @@ import { TrainingPlan, WorkoutSession, UserProfile } from '../types';
 import { toPng } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 import { getGoalGradient } from '../constants/colors';
+import { useToast } from './Toast';
 
 interface ShareModalProps {
   plan: TrainingPlan;
@@ -35,6 +36,7 @@ function getAllSessions(plan: TrainingPlan): WorkoutSession[] {
 }
 
 export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModalProps) {
+  const toast = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [exportQuality, setExportQuality] = useState<'high' | 'medium' | 'low'>('high');
   const [exportMode, setExportMode] = useState<'simple' | 'detailed'>('simple');
@@ -44,6 +46,7 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExportingView, setIsExportingView] = useState(false); // ✅ 新增：是否正在导出（用于控制缩放）
+  const [isCopying, setIsCopying] = useState(false); // ✅ 新增：是否正在复制到剪贴板
 
   // 获取所有训练日
   const allSessions = useMemo(() => getAllSessions(plan), [plan]);
@@ -78,6 +81,41 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
       .map((index) => allSessions[index]);
   }, [selectedDays, allSessions]);
 
+  // 检测浏览器是否支持剪贴板 API
+  const supportsClipboardItem = useMemo(() => {
+    return 'clipboard' in navigator && 'ClipboardItem' in window;
+  }, []);
+
+  // 复制图片到剪贴板
+  const copyToClipboard = async (dataUrl: string) => {
+    if (!supportsClipboardItem) {
+      toast.error('您的浏览器不支持复制图片到剪贴板，请使用下载功能');
+      return false;
+    }
+
+    try {
+      setIsCopying(true);
+
+      // 将 dataUrl 转换为 Blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+
+      // 使用 Clipboard API 复制图片
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+
+      toast.success('✅ 图片已复制到剪贴板，可直接粘贴到微信、QQ等应用');
+      return true;
+    } catch (error) {
+      console.error('复制到剪贴板失败:', error);
+      toast.error('复制失败，请尝试下载功能');
+      return false;
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // 获取质量对应的 pixelRatio
@@ -90,10 +128,10 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
     }
   };
 
-  // 导出为图片
-  const handleExport = async () => {
+  // 导出为图片（支持下载和复制到剪贴板）
+  const handleExport = async (downloadMode: 'download' | 'clipboard' = 'download') => {
     if (!exportRef.current || selectedSessions.length === 0) {
-      alert('请至少选择一天的训练计划');
+      toast.error('请至少选择一天的训练计划');
       return;
     }
 
@@ -113,16 +151,24 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
         height: exportRef.current.scrollHeight,
       });
 
-      const link = document.createElement('a');
-      const modeLabel = exportMode === 'simple' ? '简略' : '详细';
-      link.download = `训练计划-${plan.summary.goalZh}-${modeLabel}-${selectedSessions.length}天-${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = dataUrl;
-      link.click();
-
-      onClose();
+      if (downloadMode === 'download') {
+        // 下载图片
+        const link = document.createElement('a');
+        const modeLabel = exportMode === 'simple' ? '简略' : '详细';
+        link.download = `训练计划-${plan.summary.goalZh}-${modeLabel}-${selectedSessions.length}天-${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast.success('✅ 图片下载成功！');
+      } else {
+        // 复制到剪贴板
+        const success = await copyToClipboard(dataUrl);
+        if (success) {
+          onClose(); // 复制成功后关闭弹窗
+        }
+      }
     } catch (error) {
       console.error('导出失败:', error);
-      alert('导出失败，请稍后重试');
+      toast.error('导出失败，请稍后重试');
     } finally {
       setIsExportingView(false); // ✅ 恢复预览模式
       setIsExporting(false);
@@ -357,28 +403,66 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
                 </div>
               </div>
 
-              {/* 导出按钮 */}
-              <button
-                onClick={handleExport}
-                disabled={isExporting || selectedSessions.length === 0}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all ${
-                  isExporting || selectedSessions.length === 0
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-                }`}
-              >
-                {isExporting ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    生成中...
-                  </span>
-                ) : (
-                  `📷 生成并下载图片 (${exportMode === 'simple' ? '简略' : '详细'} - ${selectedSessions.length}天)`
+              {/* 导出按钮组 */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* 复制到剪贴板按钮 */}
+                {supportsClipboardItem && (
+                  <button
+                    onClick={() => handleExport('clipboard')}
+                    disabled={isCopying || isExporting || selectedSessions.length === 0}
+                    className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-all ${
+                      isCopying || isExporting || selectedSessions.length === 0
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
+                    }`}
+                  >
+                    {isCopying ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        复制中...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        复制到剪贴板
+                      </span>
+                    )}
+                  </button>
                 )}
-              </button>
+
+                {/* 下载图片按钮 */}
+                <button
+                  onClick={() => handleExport('download')}
+                  disabled={isExporting || isCopying || selectedSessions.length === 0}
+                  className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-all ${
+                    isExporting || isCopying || selectedSessions.length === 0
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                  }`}
+                >
+                  {isExporting ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      生成中...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      下载图片
+                    </span>
+                  )}
+                </button>
+              </div>
 
               {/* 提示信息 */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -389,6 +473,8 @@ export default function ShareModal({ plan, profile, isOpen, onClose }: ShareModa
                     <ul className="space-y-1 text-xs text-blue-800">
                       <li>• 简略版：显示每天的训练概要，适合快速分享</li>
                       <li>• 详细版：显示所有训练动作详情，适合保存使用</li>
+                      <li>• 复制到剪贴板：可直接粘贴到微信、QQ等应用（支持的浏览器）</li>
+                      <li>• 下载图片：保存到本地，适合长期存档</li>
                       <li>• 图片高度会根据选择的日期自动调整</li>
                     </ul>
                   </div>
